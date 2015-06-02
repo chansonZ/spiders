@@ -8,8 +8,11 @@
 from scrapy import Field, Item
 
 
-class FulcrumRacing7CX2014(Item):
+class Product(Item):
+    id = Field()
+    name = Field()
     product = Field()
+    description = Field()
     link = Field()
     price = Field()
 
