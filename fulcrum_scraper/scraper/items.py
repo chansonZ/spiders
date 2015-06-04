@@ -6,14 +6,12 @@
 # http://doc.scrapy.org/en/latest/topics/items.html
 
 from scrapy import Field, Item
+from datetime import datetime
 
 
 class Product(Item):
-    id = Field()
-    name = Field()
-    product = Field()
+    date = datetime.today()
     description = Field()
-    link = Field()
     price = Field()
 
 
