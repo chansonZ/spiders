@@ -4,8 +4,7 @@ from re import compile, match
 
 
 def clean(text):
-    junk = [r'\n',
-            r'\r']
+    junk = [r'\n', r'\r']
 
     for j in junk:
         pattern = compile(j)
@@ -15,7 +14,7 @@ def clean(text):
 
 
 class BikeComponents(Spider):
-    name = 'bike-components.de'
+    name = 'bike-components'
     allowed_domains = ['bike-components.de']
     start_urls = ['https://www.bike-components.de/advanced_search_result.php?keywords=fulcrum']
 
@@ -45,3 +44,19 @@ class BikeComponents(Spider):
     def parse_description(raw_description):
         return clean(raw_description)
 
+
+class ChainReaction():
+    name = 'chain-reaction'
+    start_urls = 'http://www.chainreactioncycles.com/de/de/s?q=fulcrum'
+    allowed_domain = 'chainreactioncycles.com'
+
+    def parse(self, response):
+        prices_xpath = '//*[@id="grid-view"]/div[13]/div/div/ul/li[5]/span'
+        descriptions_xpath = '//*[@id="grid-view"]/div[13]/div/div/ul/li[3]/a'
+
+        prices = response.xpath(prices_xpath)
+        descriptions = response.xpath(descriptions_xpath)
+
+        product = Product()
+
+        for price, description in zip(prices, descriptions):
