@@ -33,18 +33,16 @@ class BikeComponents(CrawlSpider):
 
     def parse_product(self, response):
         prices_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
-        descriptions_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
-        ids_xpath = '//*[@id="module-product-item-description"]/div/text()[5]'
+        models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
 
         prices = response.xpath(prices_xpath).extract()
-        descriptions = response.xpath(descriptions_xpath).extract()
-        ids = response.xpath(ids_xpath).extract()
+        models = response.xpath(models_xpath).extract()
 
         product = Product()
 
-        for price, description, id_ in zip(prices, descriptions, ids):
+        for price, model in zip(prices, models):
             product['price'] = self.parse_price(price)
-            product['id'] = self.parse_id(response, description)
+            product['id'] = self.parse_id(response, model)
             product['retailer'] = 'bike-components'
             product['url'] = response.url
             product['date'] = datetime.today()
