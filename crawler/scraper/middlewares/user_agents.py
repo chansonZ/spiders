@@ -1,7 +1,6 @@
-""" 
-This module provides a pool of user-agents for the spider. See:
-    - http://tangww.com/2013/06/UsingRandomAgent/
-    - http://www.whatsmyuseragent.com/CommonUserAgents
+""" This module provides a pool of user-agents for the spider. See:
+        - http://tangww.com/2013/06/UsingRandomAgent/
+        - http://www.whatsmyuseragent.com/CommonUserAgents
 """
 
 from random import choice

@@ -1,63 +1,63 @@
-from scrapy import Spider
+""" Crawler and scraper for Bike Components retailer at https://www.bike-components.de. """
+
+from scrapy.contrib.spiders import CrawlSpider, Rule
+from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
+
+from re import compile, match, search
+from datetime import datetime
+
 from ..items import Product
-from re import compile, match
 
 
 def clean(text):
-    junk = [r'\n', r'\r']
+    junk = ['\n', '\r', '/', ' ', '-Fulcrum|-fulcrum', '--']
+    substitutes = ['', '', '-', '', '', '-']
 
-    for j in junk:
+    for j, s in zip(junk, substitutes):
         pattern = compile(j)
-        text = pattern.sub('', text)
+        text = pattern.sub(s, text)
+
+    leading_non_alpha_numerical = compile('^[^a-zA-Z]+')
+    text = leading_non_alpha_numerical.sub('', text)
 
     return text.strip()
 
 
-class BikeComponents(Spider):
+class BikeComponents(CrawlSpider):
     name = 'bike-components'
     allowed_domains = ['bike-components.de']
     start_urls = ['https://www.bike-components.de/advanced_search_result.php?keywords=fulcrum']
 
-    def parse(self, response):
-        prices_xpath = '//*[@id="grid-content"]/div/div[2]/ul/li/a/span/text()'
-        description_xpath = '//*[@id="grid-content"]/div/div[2]/ul/li/a/h2/text()'
+    link_extractor = LxmlLinkExtractor(allow='/Fulcrum/\w+')
+    rules = [Rule(link_extractor, callback='parse_product')]
+
+    def parse_product(self, response):
+        prices_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
+        descriptions_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
+        ids_xpath = '//*[@id="module-product-item-description"]/div/text()[5]'
 
         prices = response.xpath(prices_xpath).extract()
-        descriptions = response.xpath(description_xpath).extract()
+        descriptions = response.xpath(descriptions_xpath).extract()
+        ids = response.xpath(ids_xpath).extract()
 
         product = Product()
 
-        for price, description in zip(prices, descriptions):
+        for price, description, id_ in zip(prices, descriptions, ids):
             product['price'] = self.parse_price(price)
-            product['description'] = self.parse_description(description)
+            product['id'] = self.parse_id(response, description)
+            product['retailer'] = 'bike-components'
+            product['url'] = response.url
+            product['date'] = datetime.today()
             yield product
 
     @staticmethod
     def parse_price(raw_price):
-        matched = match('(\d+,\d{2})', clean(raw_price))
-        if matched:
-            return float(matched.group(0).replace(',', '.'))
-        else:
-            return None
+        matched = match(r'(\d+,\d{2})', raw_price)
+        return float(matched.group(0).replace(',', '.'))
 
     @staticmethod
-    def parse_description(raw_description):
-        return clean(raw_description)
-
-
-class ChainReaction():
-    name = 'chain-reaction'
-    start_urls = 'http://www.chainreactioncycles.com/de/de/s?q=fulcrum'
-    allowed_domain = 'chainreactioncycles.com'
-
-    def parse(self, response):
-        prices_xpath = '//*[@id="grid-view"]/div[13]/div/div/ul/li[5]/span'
-        descriptions_xpath = '//*[@id="grid-view"]/div[13]/div/div/ul/li[3]/a'
-
-        prices = response.xpath(prices_xpath)
-        descriptions = response.xpath(descriptions_xpath)
-
-        product = Product()
-
-        for price, description in zip(prices, descriptions):
-            pass
+    def parse_id(response, raw_description):
+        matched = search(r'/([^/]*)/$', response.url)
+        model = matched.group(0)
+        description = '-'.join([model, raw_description])
+        return clean(description)
