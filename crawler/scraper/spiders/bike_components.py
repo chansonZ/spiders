@@ -1,5 +1,5 @@
 from scrapy import Spider
-from scraper.items import Product
+from ..items import Product
 from re import compile, match
 
 
@@ -60,3 +60,4 @@ class ChainReaction():
         product = Product()
 
         for price, description in zip(prices, descriptions):
+            pass
