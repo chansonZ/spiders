@@ -18,7 +18,7 @@ def clean(text):
         text = pattern.sub(s, text)
 
     leading_non_alpha_numerical = compile('^[^a-zA-Z]+')
-    text = leading_non_alpha_numerical.sub('', text)
+    text = leading_non_alpha_numerical.sub('', text).lower()
 
     return text.strip()
 
@@ -32,13 +32,13 @@ class BikeComponents(CrawlSpider):
     rules = [Rule(link_extractor, callback='parse_product')]
 
     def parse_product(self, response):
+        product = Product()
+
         prices_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
         models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
 
         prices = response.xpath(prices_xpath).extract()
         models = response.xpath(models_xpath).extract()
-
-        product = Product()
 
         for price, model in zip(prices, models):
             product['price'] = self.parse_price(price)
@@ -53,9 +53,8 @@ class BikeComponents(CrawlSpider):
         matched = match(r'(\d+,\d{2})', raw_price)
         return float(matched.group(0).replace(',', '.'))
 
-    @staticmethod
-    def parse_id(response, raw_description):
+    def parse_id(self, response, raw_description):
         matched = search(r'/([^/]*)/$', response.url)
         model = matched.group(0)
-        description = '-'.join([model, raw_description])
+        description = '-'.join([self.name, model, raw_description])
         return clean(description)
