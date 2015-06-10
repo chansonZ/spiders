@@ -1,4 +1,4 @@
-""" Crawler and scraper for Bike Components retailer at https://www.bike-components.de. """
+""" This is the crawler and scraper for Bike Components retailer at https://www.bike-components.de. """
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
