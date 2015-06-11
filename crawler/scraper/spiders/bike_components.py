@@ -1,4 +1,4 @@
-""" This is the crawler and scraper for Bike Components retailer at https://www.bike-components.de. """
+""" This is the crawler and scraper for the Bike Components retailer at https://www.bike-components.de. """
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
@@ -26,10 +26,12 @@ def clean(text):
 class BikeComponents(CrawlSpider):
     name = 'bike-components'
     allowed_domains = ['bike-components.de']
-    start_urls = ['https://www.bike-components.de/advanced_search_result.php?keywords=fulcrum']
+    start_urls = ['https://www.bike-components.de/en/Fulcrum/']
 
-    link_extractor = LxmlLinkExtractor(allow='/Fulcrum/\w+')
-    rules = [Rule(link_extractor, callback='parse_product')]
+    products = LxmlLinkExtractor(allow='/en/Fulcrum/\w+')
+    next_page = LxmlLinkExtractor(allow='page=')
+
+    rules = [Rule(products, callback='parse_product'), Rule(next_page)]
 
     def parse_product(self, response):
         product = Product()
