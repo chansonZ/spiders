@@ -4,7 +4,7 @@
 """
 
 from random import choice
-from crawler.contrib.downloadermiddleware.useragent import UserAgentMiddleware
+from scrapy.contrib.downloadermiddleware.useragent import UserAgentMiddleware
 
 
 USER_AGENTS = ['Mozilla/5.0; Windows NT 6.1; WOW64; Trident/7.0; rv:11.0; like Gecko',

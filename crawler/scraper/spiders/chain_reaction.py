@@ -1,4 +1,4 @@
-from crawler import Spider
+from scrapy import Spider
 from ..items import Product
 from re import compile, match
 
