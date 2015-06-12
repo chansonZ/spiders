@@ -1,7 +1,7 @@
 """ This is the crawler and scraper for the Bike Components retailer at https://www.bike-components.de. """
 
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
+from crawler.contrib.spiders import CrawlSpider, Rule
+from crawler.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
 
 from re import compile, match, search
 from datetime import datetime
