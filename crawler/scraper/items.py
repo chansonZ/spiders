@@ -5,6 +5,7 @@ from scrapy import Field, Item
 
 
 class Product(Item):
+    manufacturer = Field()
     price = Field()
     date = Field()
     id = Field()

@@ -48,6 +48,7 @@ class BikeComponents(CrawlSpider):
             product['retailer'] = 'bike-components'
             product['url'] = response.url
             product['date'] = datetime.today()
+            product['manufacturer'] = 'fulcrum'
             yield product
 
     @staticmethod
