@@ -1,11 +1,18 @@
-# -*- coding: utf-8 -*-
+""" This module contains all the pipelines used after the scraping is done.
+    See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html.
+"""
 
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
+from scrapy.exceptions import DropItem
 
 
-class ScraperPipeline(object):
-    def process_item(self, item, spider):
-        return item
+class CheckDuplicates():
+
+    def __init__(self):
+        self.ids = set()
+
+    def check_id(self, item, spider):
+        if item['id'] in self.ids:
+            raise DropItem('Duplicate item found for %s' % item['name'])
+        else:
+            self.ids.add(item['id'])
+            return item
