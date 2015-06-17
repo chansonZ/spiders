@@ -4,9 +4,7 @@
 
 from scrapy import Field, Item
 from scrapy.contrib.loader import ItemLoader
-from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Compose, Identity
-
-from w3lib.html import remove_tags
+from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst
 
 from .utilities import slugify, asciify, force_lower, strip_blanks
 from .utilities import parse_price, parse_stock
@@ -32,23 +30,28 @@ class Product(Item):
 
 
 class ProductLoader(ItemLoader):
-    """ Generic product loader. """
-    pass
+    """ Default product loader. """
+
+    name_out = TakeFirst()
+    hash_out = TakeFirst()
+    url_out = TakeFirst()
+    id_out = TakeFirst()
+    price_out = TakeFirst()
+    vat_out = TakeFirst()
+    currency_out = TakeFirst()
+    retailer_out = TakeFirst()
+    manufacturer_out = TakeFirst()
+    timestamp_out = TakeFirst()
+    stock_out = TakeFirst()
 
 
 class BikeComponentsProductLoader(ProductLoader):
-    """ Product loader for the bike-components.de store. """
+    """ Product loader for bike-components.de. """
 
-    name_in = Compose(remove_tags, strip_blanks, asciify, slugify, force_lower)
-    name_out = Identity()
-
-    hash_in = MapCompose(remove_tags, strip_blanks, asciify, slugify, force_lower)
-    hash_out = Join(separator='-')
-
-    id_in = MapCompose(remove_tags)
-
-    price_in = MapCompose(remove_tags, strip_blanks, parse_price)
-    price_out = TakeFirst()
-
+    name_in = MapCompose(strip_blanks, asciify, slugify, force_lower)
+    hash_in = MapCompose(strip_blanks, asciify, slugify, force_lower)
+    price_in = MapCompose(strip_blanks, parse_price)
     stock_in = MapCompose(parse_stock)
-    stock_out = Identity()
+    id_in = MapCompose(strip_blanks)
+
+    hash_out = Join(separator='-')

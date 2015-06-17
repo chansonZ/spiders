@@ -19,7 +19,7 @@ def force_lower(input_string):
 
 
 def parse_price(raw_price):
-    return float(match(r'(\d+,\d{2})', raw_price).group(0).replace(',', '.'))
+    return float(match(r'((\d+\.)*\d+,\d{2})', raw_price).group(0).replace('.', '').replace(',', '.'))
 
 
 def strip_blanks(input_string):
@@ -27,13 +27,13 @@ def strip_blanks(input_string):
 
 
 def parse_stock(input_string):
-    return bool('in stock' in input_string)
-
+    a = bool('in stock' in input_string)
+    return a
 
 if __name__ == '__main__':
     """ Test the module. """
 
-    text = u'\r    öüsdüjp&56%$/$/%")")oihdv 920707,08€\n   '
+    text = u'    öüsdüjp&56%$/$/%")")oihdv 920707,08€   '
     print 'input text = %s' % text
 
     a = force_lower(text)
@@ -62,6 +62,7 @@ if __name__ == '__main__':
 
     in_stock = u'in stock'
     print 'in_stock = %s' % in_stock
+
     s = parse_stock(in_stock)
     print 'parse_stock = %s' % s
 
