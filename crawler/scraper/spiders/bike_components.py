@@ -1,26 +1,12 @@
-""" This is the crawler and scraper for the Bike Components retailer at https://www.bike-components.de. """
+""" Crawler for Bike Components (https://www.bike-components.de). """
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
+from scrapy.exceptions import DropItem
 
-from re import compile, match, search
 from datetime import datetime
 
-from ..items import Product
-
-
-def clean(text):
-    junk = ['\n', '\r', '/', ' ', '-Fulcrum|-fulcrum', '--']
-    substitutes = ['', '', '-', '', '', '-']
-
-    for j, s in zip(junk, substitutes):
-        pattern = compile(j)
-        text = pattern.sub(s, text)
-
-    leading_non_alpha_numerical = compile('^[^a-zA-Z]+')
-    text = leading_non_alpha_numerical.sub('', text).lower()
-
-    return text.strip()
+from ..items import Product, BikeComponentsProductLoader
 
 
 class BikeComponents(CrawlSpider):
@@ -34,30 +20,48 @@ class BikeComponents(CrawlSpider):
     rules = [Rule(products, callback='parse_product'), Rule(next_page)]
 
     def parse_product(self, response):
-        product = Product()
+        """ Parse a product from Bike Components. One product may have multiple models,
+            in which case each model is scraped """
 
-        prices_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
-        models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
+        # Paths that point to a single node
+        title_xpath = '//*[@id="module-product-item"]/div[3]/div[1]/h1/span'
+        id_xpath = '//*[@id="module-product-item-description"]/span[1]/span'
 
-        prices = response.xpath(prices_xpath).extract()
+        # Paths that point to multiple nodes
+        prices_xpath_1 = '//*[@id="module-product-item-description"]/div/ul/li/span[2]'
+        prices_xpath_2 = '//*[@id="module-product-item"]/div[3]/div[1]/div[2]/span'
+        models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]'
+        stocks_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[3]'
+
+        loader = BikeComponentsProductLoader(item=Product(), response=response)
+
+        prices_1 = response.xpath(prices_xpath_1).extract()
+        prices_2 = response.xpath(prices_xpath_2).extract()
         models = response.xpath(models_xpath).extract()
+        stocks = response.xpath(stocks_xpath).extract()
 
-        for price, model in zip(prices, models):
-            product['price'] = self.parse_price(price)
-            product['id'] = self.parse_id(response, model)
-            product['retailer'] = 'bike-components'
-            product['url'] = response.url
-            product['date'] = datetime.today()
-            product['manufacturer'] = 'fulcrum'
-            yield product
+        try:
+            models = zip(prices_1, prices_2, models, stocks)
+        except:
+            raise DropItem('Cannot scrape: %s' % response.url)
 
-    @staticmethod
-    def parse_price(raw_price):
-        matched = match(r'(\d+,\d{2})', raw_price)
-        return float(matched.group(0).replace(',', '.'))
+        for price_1, price_2, model, stock in models:
 
-    def parse_id(self, response, raw_description):
-        matched = search(r'/([^/]*)/$', response.url)
-        model = matched.group(0)
-        description = '-'.join([self.name, model, raw_description])
-        return clean(description)
+            loader.add_value('price', price_1)
+            loader.add_value('price', price_2)
+
+            loader.add_value('hash', 'bike-components')
+            loader.add_value('hash', 'fulcrum')
+            loader.add_xpath('hash', title_xpath)
+            loader.add_value('hash', model)
+
+            loader.add_value('stock', stock)
+
+            loader.add_xpath('id', id_xpath)
+
+            loader.add_value('url', response.url)
+            loader.add_value('timestamp', datetime.today())
+            loader.add_value('manufacturer', 'Fulcrum')
+            loader.add_value('retailer', 'bike-components.de')
+
+            yield loader.load_item()
