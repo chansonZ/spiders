@@ -1,8 +1,7 @@
 """ The crawler for Bike Components (https://www.bike-components.de). """
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
-from scrapy.exceptions import DropItem
+from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
 
 from datetime import datetime
@@ -14,29 +13,40 @@ class BikeComponents(CrawlSpider):
     name = 'bike-components'
     allowed_domains = ['bike-components.de']
     start_urls = ['https://www.bike-components.de/en/Fulcrum/']
+    rules = [Rule(Extractor(allow='/en/Fulcrum/\w+'), callback='parse_product_page'), Rule(Extractor(allow='page='))]
 
-    products = LxmlLinkExtractor(allow='/en/Fulcrum/\w+')
-    next_page = LxmlLinkExtractor(allow='page=')
 
-    rules = [Rule(products, callback='parse_product_page'), Rule(next_page)]
+class BikeComponentsReviews(BikeComponents):
+    name = 'bike-components-reviews'
 
     @staticmethod
     def parse_product_page(response):
-        """ Parse a product from bike-components.de. A single product page may contains multiple
-            sub-products (models). From a scraping point of view, each model is one product.
-        """
+        loader = BikeComponentsProductLoader(item=Product(), response=response)
 
+        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()')
+        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()')
+        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()')
+
+        return loader.load_item()
+
+
+class BikeComponentsProducts(BikeComponents):
+    name = 'bike-components-products'
+
+    @staticmethod
+    def parse_product_page(response):
         loader = BikeComponentsProductLoader(item=Product(), response=response)
         selector = Selector(response=response)
 
-        # Paths that point to a single node
         title_xpath = '//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()'
         id_xpath = '//div[@id="module-product-item-description"]/span[1]/span/text()'
 
         title = selector.xpath(title_xpath).extract()
         id_ = selector.xpath(id_xpath).extract()
 
-        # Paths that point to multiple nodes
+        # Parse a product from bike-components.de. A single product page may contains multiple
+        # sub-products (models). From a scraping point of view, each model is one product.
+
         prices_xpath_1 = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
         prices_xpath_2 = '//*[@id="module-product-item"]/div[3]/div[1]/div[2]/span/text()'
         models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
@@ -47,31 +57,7 @@ class BikeComponents(CrawlSpider):
         models = selector.xpath(models_xpath).extract()
         stocks = selector.xpath(stocks_xpath).extract()
 
-        # Comments
-        grades_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()'
-        authors_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()'
-        comments_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()'
-
-        grades = selector.xpath(grades_xpath).extract()
-        authors = selector.xpath(authors_xpath).extract()
-        comments = selector.xpath(comments_xpath).extract()
-
-        try:
-            reviews = zip(grades, authors, comments)
-        except:
-            raise DropItem('Cannot scrape: %s' % response.url)
-
-        for grade, author, comment in reviews:
-            loader.add_value('reviews', grade)
-            loader.add_value('reviews', author)
-            loader.add_value('reviews', comment)
-
-        try:
-            models = zip(prices_1, prices_2, models, stocks)
-        except:
-            raise DropItem('Cannot scrape: %s' % response.url)
-
-        for price_1, price_2, model, stock in models:
+        for price_1, price_2, model, stock in zip(prices_1, prices_2, models, stocks):
 
             loader.add_value('price', price_1)
             loader.add_value('price', price_2)
