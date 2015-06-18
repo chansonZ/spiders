@@ -47,6 +47,25 @@ class BikeComponents(CrawlSpider):
         models = selector.xpath(models_xpath).extract()
         stocks = selector.xpath(stocks_xpath).extract()
 
+        # Comments
+        grades_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()'
+        authors_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()'
+        comments_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()'
+
+        grades = selector.xpath(grades_xpath).extract()
+        authors = selector.xpath(authors_xpath).extract()
+        comments = selector.xpath(comments_xpath).extract()
+
+        try:
+            reviews = zip(grades, authors, comments)
+        except:
+            raise DropItem('Cannot scrape: %s' % response.url)
+
+        for grade, author, comment in reviews:
+            loader.add_value('reviews', grade)
+            loader.add_value('reviews', author)
+            loader.add_value('reviews', comment)
+
         try:
             models = zip(prices_1, prices_2, models, stocks)
         except:
@@ -65,6 +84,8 @@ class BikeComponents(CrawlSpider):
             loader.add_value('stock', stock)
 
             loader.add_value('name', title[0])
+            loader.add_value('model', model)
+            loader.add_value('slug', title[0])
             loader.add_value('id', id_[0])
 
             loader.add_value('url', response.url)
