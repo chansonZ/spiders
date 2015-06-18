@@ -8,6 +8,10 @@ from unicodedata import normalize
 SEPERATOR = '-'
 
 
+def parse_reviews(raw_reviews):
+    return raw_reviews # [raw_reviews[i::3] for i in range(0, int(len(raw_reviews)/3))]
+
+
 def trim_edges(input_string):
     return sub(r'^-|-$', '', input_string)
 
