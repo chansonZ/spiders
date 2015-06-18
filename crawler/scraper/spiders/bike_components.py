@@ -1,8 +1,9 @@
-""" Crawler for Bike Components (https://www.bike-components.de). """
+""" The crawler for Bike Components (https://www.bike-components.de). """
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor
 from scrapy.exceptions import DropItem
+from scrapy.selector import Selector
 
 from datetime import datetime
 
@@ -17,28 +18,53 @@ class BikeComponents(CrawlSpider):
     products = LxmlLinkExtractor(allow='/en/Fulcrum/\w+')
     next_page = LxmlLinkExtractor(allow='page=')
 
-    rules = [Rule(products, callback='parse_product'), Rule(next_page)]
+    rules = [Rule(products, callback='parse_product_page'), Rule(next_page)]
 
-    def parse_product(self, response):
-        """ Parse a product from Bike Components. One product may have multiple models,
-            in which case each model is scraped """
-
-        # Paths that point to a single node
-        title_xpath = '//*[@id="module-product-item"]/div[3]/div[1]/h1/span'
-        id_xpath = '//*[@id="module-product-item-description"]/span[1]/span'
-
-        # Paths that point to multiple nodes
-        prices_xpath_1 = '//*[@id="module-product-item-description"]/div/ul/li/span[2]'
-        prices_xpath_2 = '//*[@id="module-product-item"]/div[3]/div[1]/div[2]/span'
-        models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]'
-        stocks_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[3]'
+    @staticmethod
+    def parse_product_page(response):
+        """ Parse a product from bike-components.de. A single product page may contains multiple
+            sub-products (models). From a scraping point of view, each model is one product.
+        """
 
         loader = BikeComponentsProductLoader(item=Product(), response=response)
+        selector = Selector(response=response)
 
-        prices_1 = response.xpath(prices_xpath_1).extract()
-        prices_2 = response.xpath(prices_xpath_2).extract()
-        models = response.xpath(models_xpath).extract()
-        stocks = response.xpath(stocks_xpath).extract()
+        # Paths that point to a single node
+        title_xpath = '//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()'
+        id_xpath = '//div[@id="module-product-item-description"]/span[1]/span/text()'
+
+        title = selector.xpath(title_xpath).extract()
+        id_ = selector.xpath(id_xpath).extract()
+
+        # Paths that point to multiple nodes
+        prices_xpath_1 = '//*[@id="module-product-item-description"]/div/ul/li/span[2]/text()'
+        prices_xpath_2 = '//*[@id="module-product-item"]/div[3]/div[1]/div[2]/span/text()'
+        models_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()'
+        stocks_xpath = '//*[@id="module-product-item-description"]/div/ul/li/span[3]/text()'
+
+        prices_1 = selector.xpath(prices_xpath_1).extract()
+        prices_2 = selector.xpath(prices_xpath_2).extract()
+        models = selector.xpath(models_xpath).extract()
+        stocks = selector.xpath(stocks_xpath).extract()
+
+        # Comments
+        grades_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()'
+        authors_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()'
+        comments_xpath = '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()'
+
+        grades = selector.xpath(grades_xpath).extract()
+        authors = selector.xpath(authors_xpath).extract()
+        comments = selector.xpath(comments_xpath).extract()
+
+        try:
+            reviews = zip(grades, authors, comments)
+        except:
+            raise DropItem('Cannot scrape: %s' % response.url)
+
+        for grade, author, comment in reviews:
+            loader.add_value('reviews', grade)
+            loader.add_value('reviews', author)
+            loader.add_value('reviews', comment)
 
         try:
             models = zip(prices_1, prices_2, models, stocks)
@@ -50,18 +76,21 @@ class BikeComponents(CrawlSpider):
             loader.add_value('price', price_1)
             loader.add_value('price', price_2)
 
-            loader.add_value('hash', 'bike-components')
-            loader.add_value('hash', 'fulcrum')
-            loader.add_xpath('hash', title_xpath)
+            loader.add_value('hash', u'bike-components')
+            loader.add_value('hash', u'fulcrum')
+            loader.add_value('hash', title[0])
             loader.add_value('hash', model)
 
             loader.add_value('stock', stock)
 
-            loader.add_xpath('id', id_xpath)
+            loader.add_value('name', title[0])
+            loader.add_value('model', model)
+            loader.add_value('slug', title[0])
+            loader.add_value('id', id_[0])
 
             loader.add_value('url', response.url)
-            loader.add_value('timestamp', datetime.today())
-            loader.add_value('manufacturer', 'Fulcrum')
-            loader.add_value('retailer', 'bike-components.de')
+            loader.add_value('timestamp', datetime.now())
+            loader.add_value('manufacturer', u'Fulcrum')
+            loader.add_value('retailer', u'bike-components.de')
 
             yield loader.load_item()
