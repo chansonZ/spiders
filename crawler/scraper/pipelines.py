@@ -12,15 +12,17 @@ class DumpDuplicates(object):
         self.names = set()
 
     def process_item(self, item, spider):
+        oops = 'This item is a duplicate'
+
         if 'reviews' in spider.name:
             if item['name'] in self.names:
-                raise DropItem('This item is a duplicate')
+                raise DropItem(oops)
             else:
                 self.names.add(item['name'])
                 return item
         elif 'prices' in spider.name:
             if item['slug'] in self.slugs:
-                raise DropItem('This item is a duplicate')
+                raise DropItem(oops)
             else:
                 self.slugs.add(item['slug'])
                 return item
@@ -41,3 +43,12 @@ class DumpProductsWithoutReview(object):
         if 'review' not in item.keys():
             raise DropItem('No review written for this product')
         return item
+
+
+class SavePricesInsideFiletree(object):
+
+    def __int__(self):
+        pass
+    
+    def process_item(self):
+        pass

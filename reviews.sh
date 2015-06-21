@@ -12,7 +12,6 @@ output_file='/home/loic/code/wheels/output/wheels.csv'
 declare -a spiders=("bike-components-reviews")
 
 cd ${working_dir}
-rm 'reviews.csv'
 
 for spider in "${spiders[@]}"
 	do
