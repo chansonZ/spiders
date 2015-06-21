@@ -52,6 +52,7 @@ class BikeComponentsReviewLoader(ItemLoader):
     author_in = MapCompose(strip_edges, parse_author)
     date_in = MapCompose(strip_edges, parse_date)
     review_in = MapCompose(strip_edges)
+    name_in = MapCompose(strip_edges)
 
     date_out = Compose()
     author_out = Compose()

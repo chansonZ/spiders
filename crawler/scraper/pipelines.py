@@ -5,23 +5,28 @@
 from scrapy.exceptions import DropItem
 
 
-class CheckDuplicates(object):
+class DumpDuplicates(object):
 
     def __init__(self):
-        self.ids = set()
+        self.id = set()
 
-    def check_id(self, item, spider):
+    def process_item_bla(self, item):
         if item['id'] in self.ids:
-            raise DropItem('Duplicate item found for %s' % item['name'])
+            raise DropItem('This product is a duplicate')
         else:
             self.ids.add(item['id'])
             return item
 
 
-class CheckReview(object):
+class DumpProductsWithoutReview(object):
 
     def __init__(self):
         pass
 
-    def check_review(self, item, spider):
-        pass
+    @staticmethod
+    def process_item(item, spider):
+        if 'reviews' not in spider.name:
+            return item
+        if 'review' not in item.keys():
+            raise DropItem('No review written for this product')
+        return item
