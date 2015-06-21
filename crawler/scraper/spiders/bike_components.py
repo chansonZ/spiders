@@ -6,11 +6,13 @@ from scrapy.selector import Selector
 
 from datetime import datetime
 
-from ..items import Product, BikeComponentsProductLoader
+from ..items import Product, BikeComponentsProductLoader, BikeComponentsReviewLoader, Review
+
+MANUFACTURER = u'Fulcrum'
+RETAILER = u'bike-components.de'
 
 
 class BikeComponents(CrawlSpider):
-    name = 'bike-components'
     allowed_domains = ['bike-components.de']
     start_urls = ['https://www.bike-components.de/en/Fulcrum/']
     rules = [Rule(Extractor(allow='/en/Fulcrum/\w+'), callback='parse_product_page'), Rule(Extractor(allow='page='))]
@@ -21,11 +23,17 @@ class BikeComponentsReviews(BikeComponents):
 
     @staticmethod
     def parse_product_page(response):
-        loader = BikeComponentsProductLoader(item=Product(), response=response)
+        loader = BikeComponentsReviewLoader(item=Review(), response=response)
 
-        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()')
-        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()')
-        loader.add_xpath('reviews', '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()')
+        loader.add_xpath('name', '//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()')
+        loader.add_xpath('rating', '//*[@id="module-product-reviews-list"]/div/div[2]/div/div[1]/span/text()')
+        loader.add_xpath('date', '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()')
+        loader.add_xpath('author', '//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()')
+        loader.add_xpath('review', '//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()')
+
+        loader.add_value('url', response.url)
+        loader.add_value('manufacturer', MANUFACTURER)
+        loader.add_value('retailer', RETAILER)
 
         return loader.load_item()
 
@@ -76,7 +84,7 @@ class BikeComponentsProducts(BikeComponents):
 
             loader.add_value('url', response.url)
             loader.add_value('timestamp', datetime.now())
-            loader.add_value('manufacturer', u'Fulcrum')
-            loader.add_value('retailer', u'bike-components.de')
+            loader.add_value('manufacturer', MANUFACTURER)
+            loader.add_value('retailer', RETAILER)
 
             yield loader.load_item()
