@@ -5,7 +5,7 @@
 from scrapy.exceptions import DropItem
 
 
-class CheckDuplicates():
+class CheckDuplicates(object):
 
     def __init__(self):
         self.ids = set()
@@ -16,3 +16,12 @@ class CheckDuplicates():
         else:
             self.ids.add(item['id'])
             return item
+
+
+class CheckReview(object):
+
+    def __init__(self):
+        pass
+
+    def check_review(self, item, spider):
+        pass
