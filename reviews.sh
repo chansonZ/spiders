@@ -9,9 +9,10 @@ working_dir='/home/loic/code/wheels/scrapy'
 output_file='/home/loic/code/wheels/output/wheels.csv'
 
 # Specify the spiders (one spider per retailer)
-declare -a spiders=("bike-components")
+declare -a spiders=("bike-components-reviews")
 
 cd ${working_dir}
+rm 'reviews.csv'
 
 for spider in "${spiders[@]}"
 	do
