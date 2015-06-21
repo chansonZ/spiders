@@ -52,8 +52,5 @@ class BikeComponentsPriceLoader(BikeComponentsProductLoader):
 class BikeComponentsReviewLoader(BikeComponentsProductLoader):
     review_in = MapCompose(strip_edges)
     rating_in = MapCompose(strip_edges, parse_rating)
-    rating_out = Compose()
     author_in = MapCompose(strip_edges, parse_author)
-    author_out = Compose()
     date_in = MapCompose(strip_edges, parse_date)
-    date_out = Compose()

@@ -5,19 +5,26 @@
 from scrapy.exceptions import DropItem
 
 
-class DumpPriceDuplicates(object):
+class DumpDuplicates(object):
 
     def __init__(self):
         self.slugs = set()
+        self.names = set()
 
     def process_item(self, item, spider):
-        # This filter is just for scraping prices
-        if 'prices' not in spider.name:
-            return item
-        if item['slug'] in self.slugs:
-            raise DropItem('This product is a duplicate')
+        if 'reviews' in spider.name:
+            if item['name'] in self.names:
+                raise DropItem('This item is a duplicate')
+            else:
+                self.names.add(item['name'])
+                return item
+        elif 'prices' in spider.name:
+            if item['slug'] in self.slugs:
+                raise DropItem('This item is a duplicate')
+            else:
+                self.slugs.add(item['slug'])
+                return item
         else:
-            self.slugs.add(item['slug'])
             return item
 
 
