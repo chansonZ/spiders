@@ -6,7 +6,7 @@ from scrapy.selector import Selector
 
 from datetime import datetime
 
-from ..items import Product, BikeComponentsPriceLoader, BikeComponentsReviewLoader, Review
+from ..items import Product, BikeComponentsPriceLoader, BikeComponentsReviewLoader, Review, Price
 
 MANUFACTURER = u'Fulcrum'
 RETAILER = u'bike-components.de'
@@ -39,11 +39,11 @@ class BikeComponentsReviews(BikeComponents):
 
 
 class BikeComponentsPrices(BikeComponents):
-    name = 'bike-components-products'
+    name = 'bike-components-prices'
 
     @staticmethod
     def parse_product_page(response):
-        loader = BikeComponentsPriceLoader(item=Product(), response=response)
+        loader = BikeComponentsPriceLoader(item=Price(), response=response)
         selector = Selector(response=response)
 
         title_xpath = '//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()'

@@ -12,5 +12,5 @@ NEWSPIDER_MODULE = 'scraper.spiders'
 DOWNLOADER_MIDDLEWARES = {'scrapy.contrib.downloadermiddleware.useragent.UserAgentMiddleware': None,
                           'scraper.middlewares.user_agents.RotateUserAgentMiddleware': 400}
 
-ITEM_PIPELINES = {'scraper.pipelines.DumpDuplicates': 300,
+ITEM_PIPELINES = {'scraper.pipelines.DumpPriceDuplicates': 300,
                   'scraper.pipelines.DumpProductsWithoutReview': 200}
