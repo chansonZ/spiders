@@ -47,7 +47,7 @@ class DumpProductsWithoutReview(object):
         return item
 
 
-class SavePricesInsideFileTree(object):
+class SavePricesToFileTree(object):
 
     def __init__(self):
         self.file = str()
@@ -74,18 +74,13 @@ class SavePricesInsideFileTree(object):
             self._initialize()
             self.process_item(self.item, self.spider)
 
-    @property
-    def _item(self):
-        return join(self.path, self.file)
-
     def _write(self):
-        with open(self._item, 'a') as f:
-            w = DictWriter(f, fieldnames=self.item.keys())
+        with open(join(self.path, self.file), 'a') as f:
+            w = DictWriter(f, self.item.keys())
             w.writerow(self.item)
 
     def _initialize(self):
         makedirs(self.path)
-        with open(self._item, 'w') as f:
-            w = DictWriter(f, fieldnames=list(self.ite)
+        with open(join(self.path, self.file), 'a') as f:
+            w = DictWriter(f, self.item.keys())
             w.writeheader()
-

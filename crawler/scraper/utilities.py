@@ -10,8 +10,8 @@ from datetime import datetime
 
 
 NOTHING = ''
-TAB = '-'
-MULTIPLE_DELIMITERS = '%s{2,}' % TAB
+SLUG_DELIMITER = '-'
+MULTIPLE_DELIMITERS = '%s{2,}' % SLUG_DELIMITER
 SEPERATOR_AT_EDGES = r'^-|-$'
 
 AUTHOR = r'(?P<author>^.+?)(?= on)'
@@ -38,10 +38,10 @@ def strip_edges(input_string):
     return input_string.strip()
 
 def squeeze_seperators(input_string):
-    return sub(MULTIPLE_DELIMITERS, TAB, input_string)
+    return sub(MULTIPLE_DELIMITERS, SLUG_DELIMITER, input_string)
 
 def slugify(dirty_string):
-    return NOTHING.join([c if c in ascii_letters + digits else TAB for c in dirty_string])
+    return NOTHING.join([c if c in ascii_letters + digits else SLUG_DELIMITER for c in dirty_string])
 
 def asciify(unicode_string):
     return normalize('NFKD', unicode_string).encode('ASCII', 'ignore')

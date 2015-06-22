@@ -2,10 +2,10 @@
 
 from scrapy import Field, Item
 from scrapy.contrib.loader import ItemLoader
-from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Compose, Identity
+from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Identity
 
 from .utilities import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date
-from .utilities import parse_price, parse_stock, trim_edges, TAB, parse_author
+from .utilities import parse_price, parse_stock, trim_edges, SLUG_DELIMITER, parse_author
 
 
 DEFAULT_PROCESSORS = {'input_processor': Identity(),
@@ -36,20 +36,20 @@ class Review(Product):
     rating = Field(**DEFAULT_PROCESSORS)
 
 
-class BikeComponentsProductLoader(ItemLoader):
+class ProductLoader(ItemLoader):
     id_in = MapCompose(strip_edges)
     name_in = MapCompose(strip_edges)
     slug_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
     hash_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
-    hash_out = Join(separator=TAB)
+    hash_out = Join(separator=SLUG_DELIMITER)
 
 
-class BikeComponentsPriceLoader(BikeComponentsProductLoader):
+class PriceLoader(ProductLoader):
     stock_in = MapCompose(parse_stock)
     price_in = MapCompose(strip_edges, parse_price)
 
 
-class BikeComponentsReviewLoader(BikeComponentsProductLoader):
+class ReviewLoader(ProductLoader):
     review_in = MapCompose(strip_edges)
     rating_in = MapCompose(strip_edges, parse_rating)
     author_in = MapCompose(strip_edges, parse_author)
