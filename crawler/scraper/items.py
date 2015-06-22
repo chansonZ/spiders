@@ -37,11 +37,14 @@ class Review(Product):
 
 
 class ProductLoader(ItemLoader):
-    id_in = MapCompose(strip_edges)
+    model_in = MapCompose(asciify)
+    id_in = MapCompose(strip_edges, asciify)
     name_in = MapCompose(strip_edges)
     slug_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
     hash_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
     hash_out = Join(separator=SLUG_DELIMITER)
+    retailer_in = MapCompose(asciify)
+    manufacturer_in = MapCompose(asciify)
 
 
 class PriceLoader(ProductLoader):

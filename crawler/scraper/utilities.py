@@ -31,23 +31,23 @@ def parse_author(author_and_date):
 def parse_date(author_and_date):
     return datetime(*strptime(match(DATE, author_and_date).group('date'), '%d.%m.%Y')[0:6])
 
-def trim_edges(input_string):
-    return sub(SEPERATOR_AT_EDGES, NOTHING, input_string)
+def trim_edges(text):
+    return sub(SEPERATOR_AT_EDGES, NOTHING, text)
 
-def strip_edges(input_string):
-    return input_string.strip()
+def strip_edges(text):
+    return text.strip()
 
 def squeeze_seperators(input_string):
     return sub(MULTIPLE_DELIMITERS, SLUG_DELIMITER, input_string)
 
-def slugify(dirty_string):
-    return NOTHING.join([c if c in ascii_letters + digits else SLUG_DELIMITER for c in dirty_string])
+def slugify(text):
+    return NOTHING.join([c if c in ascii_letters + digits else SLUG_DELIMITER for c in text])
 
-def asciify(unicode_string):
-    return normalize('NFKD', unicode_string).encode('ASCII', 'ignore')
+def asciify(text):
+    return text if isinstance(text, str) else normalize('NFKD', text).encode('ASCII', 'ignore')
 
-def force_lower(input_string):
-    return input_string.lower()
+def force_lower(text):
+    return text.lower()
 
 def parse_price(raw_price):
     return float(match(PRICE, raw_price).group('price').replace('.', NOTHING).replace(',', '.'))

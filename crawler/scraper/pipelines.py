@@ -4,13 +4,15 @@
 
 
 from os import makedirs
+from os.path import exists
 from scrapy.exceptions import DropItem
-from os.path import join
-from csv import DictWriter
+from path import join
+from csv import DictWriter, writer
 
 
-ROOT = '/home/loic/code/wheels/output/wheel-prices'
-DIALECT = 'excel-tab'
+ROOT_FOLDER = '/home/loic/code/wheels/output/wheel-prices'
+CSV_FIELDS = ['timestamp', 'price', 'stock']
+CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
 
 
 class DumpDuplicates(object):
@@ -62,25 +64,38 @@ class SavePricesToFileTree(object):
         return item
 
     def _register(self, item, spider):
-        self.path = join(ROOT, item['retailer'], item['manufacturer'])
+        self.path = join(ROOT_FOLDER, item['retailer'], item['manufacturer'])
         self.file = item['slug'] + '.csv'
-        self.spider = spider
         self.item = item
+        self.spider = spider
 
     def _save(self):
         try:
-            self._write()
+            self._write_row()
         except IOError:
             self._initialize()
             self.process_item(self.item, self.spider)
 
-    def _write(self):
+    def _write_row(self):
         with open(join(self.path, self.file), 'a') as f:
-            w = DictWriter(f, self.item.keys())
-            w.writerow(self.item)
+            w = DictWriter(f, CSV_FIELDS)
+            w.writerow(self._extract(CSV_FIELDS, self.item))
 
     def _initialize(self):
-        makedirs(self.path)
-        with open(join(self.path, self.file), 'a') as f:
-            w = DictWriter(f, self.item.keys())
-            w.writeheader()
+        if not exists(self.path):
+            makedirs(self.path)
+        self._write_header()
+
+    def _write_header(self):
+        with open(join(self.path, self.file), 'w') as f:
+            w = writer(f, delimiter='=')
+            for key, value in self._extract(CSV_HEADER, self.item).items():
+                w.writerow([key, value])
+            w = writer(f, delimiter=',')
+            w.writerow(CSV_FIELDS)
+
+    @staticmethod
+    def _extract(keys, item):
+        """ Extract a subset of a dictionary. """
+        # Taken from http://code.activestate.com/recipes/115417-subset-of-a-dictionary/
+        return reduce(lambda x, y: x.update({y[0]: y[1]}) or x, map(None, keys, map(item.get, keys)), {})
