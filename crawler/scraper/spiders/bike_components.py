@@ -32,8 +32,8 @@ class BikeComponentsReviews(BikeComponents):
         authors = s.xpath('//*[@id="module-product-reviews-list"]/div/div[2]/div/span/text()').extract()
         reviews = s.xpath('//*[@id="module-product-reviews-list"]/div/div[2]/div/p/text()').extract()
 
-        # Parse a product from bike-components.de. A single product page may contains multiple
-        # sub-products (models). From a scraping point of view, each model is one product.
+        # A single product page may contain multiple reviews.
+        # From a scraping point of view, each review is one item.
         for rating, date, author, review in zip(ratings, dates, authors, reviews):
             loader.add_value('name', title)
             loader.add_value('url', response.url)
@@ -62,6 +62,7 @@ class BikeComponentsPrices(BikeComponents):
         models = s.xpath('//*[@id="module-product-item-description"]/div/ul/li/span[1]/text()').extract()
         stocks = s.xpath('//*[@id="module-product-item-description"]/div/ul/li/span[3]/text()').extract()
 
+        # A single product page may contain multiple models.
         for price_1, price_2, model, stock in zip(prices_1, prices_2, models, stocks):
             loader.add_value('price', price_1)
             loader.add_value('price', price_2)

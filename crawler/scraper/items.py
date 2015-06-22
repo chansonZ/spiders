@@ -5,7 +5,7 @@ from scrapy.contrib.loader import ItemLoader
 from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Compose, Identity
 
 from .utilities import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date
-from .utilities import parse_price, parse_stock, trim_edges, SEPERATOR, parse_author
+from .utilities import parse_price, parse_stock, trim_edges, TAB, parse_author
 
 
 DEFAULT_PROCESSORS = {'input_processor': Identity(),
@@ -41,7 +41,7 @@ class BikeComponentsProductLoader(ItemLoader):
     name_in = MapCompose(strip_edges)
     slug_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
     hash_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
-    hash_out = Join(separator=SEPERATOR)
+    hash_out = Join(separator=TAB)
 
 
 class BikeComponentsPriceLoader(BikeComponentsProductLoader):
