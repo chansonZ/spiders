@@ -21,21 +21,17 @@ class DumpDuplicates(object):
 
     def process_item(self, item, spider):
         oops = 'This item is a duplicate'
-
         if 'reviews' in spider.name:
             if item['name'] in self.names:
                 raise DropItem(oops)
             else:
                 self.names.add(item['name'])
-                return item
         elif 'prices' in spider.name:
             if item['slug'] in self.slugs:
                 raise DropItem(oops)
             else:
                 self.slugs.add(item['slug'])
-                return item
-        else:
-            return item
+        return item
 
 
 class DumpProductsWithoutReview(object):
@@ -45,11 +41,9 @@ class DumpProductsWithoutReview(object):
 
     @staticmethod
     def process_item(item, spider):
-        # This filter is for reviews only
-        if 'reviews' not in spider.name:
-            return item
-        if 'review' not in item.keys():
-            raise DropItem('No review written for this product')
+        if 'reviews' in spider.name:
+            if 'review' not in item.keys():
+                raise DropItem('No review for this product')
         return item
 
 
@@ -86,12 +80,12 @@ class SavePricesInsideFileTree(object):
 
     def _write(self):
         with open(self._item, 'a') as f:
-            w = DictWriter(f, self.item.keys(), dialect=DIALECT)
-            w.writerow(self.item.items())
+            w = DictWriter(f, fieldnames=self.item.keys())
+            w.writerow(self.item)
 
     def _initialize(self):
         makedirs(self.path)
         with open(self._item, 'w') as f:
-            w = DictWriter(f, fieldnames=list(self.item.keys()), dialect=DIALECT)
+            w = DictWriter(f, fieldnames=list(self.ite)
             w.writeheader()
 
