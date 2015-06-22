@@ -1,12 +1,12 @@
 """ This module contains all the pipelines used after the scraping is done.
     See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html.
 """
-
+from genericpath import isfile
 
 from os import makedirs
 from os.path import exists
 from scrapy.exceptions import DropItem
-from path import join
+from os.path import join
 from csv import DictWriter, writer
 
 
@@ -60,7 +60,11 @@ class SavePricesToFileTree(object):
     def process_item(self, item, spider):
         if 'prices' in spider.name:
             self._register(item, spider)
-            self._save()
+            if isfile(self._item_file):
+                self._write_row()
+            else:
+                self._initialize()
+                self.process_item(self.item, self.spider)
         return item
 
     def _register(self, item, spider):
@@ -69,15 +73,12 @@ class SavePricesToFileTree(object):
         self.item = item
         self.spider = spider
 
-    def _save(self):
-        try:
-            self._write_row()
-        except IOError:
-            self._initialize()
-            self.process_item(self.item, self.spider)
+    @property
+    def _item_file(self):
+        return join(self.path, self.file)
 
     def _write_row(self):
-        with open(join(self.path, self.file), 'a') as f:
+        with open(self._item_file, 'a') as f:
             w = DictWriter(f, CSV_FIELDS)
             w.writerow(self._extract(CSV_FIELDS, self.item))
 
@@ -87,7 +88,7 @@ class SavePricesToFileTree(object):
         self._write_header()
 
     def _write_header(self):
-        with open(join(self.path, self.file), 'w') as f:
+        with open(self._item_file, 'w') as f:
             w = writer(f, delimiter='=')
             for key, value in self._extract(CSV_HEADER, self.item).items():
                 w.writerow([key, value])
