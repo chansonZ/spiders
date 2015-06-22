@@ -10,8 +10,8 @@ from datetime import datetime
 
 
 NOTHING = ''
-SEPERATOR = '-'
-MULTIPLE_SEPERATORS = '%s{2,}' % SEPERATOR
+TAB = '-'
+MULTIPLE_DELIMITERS = '%s{2,}' % TAB
 SEPERATOR_AT_EDGES = r'^-|-$'
 
 AUTHOR = r'(?P<author>^.+?)(?= on)'
@@ -20,7 +20,7 @@ PRICE = r'(?P<price>(\d+\.)*\d+,\d{2})'
 
 
 def parse_stock(input_string):
-    return bool('stock' in input_string)
+    return bool('in stock' in input_string)
 
 def parse_rating(rating_string):
     return int(rating_string[0])
@@ -38,10 +38,10 @@ def strip_edges(input_string):
     return input_string.strip()
 
 def squeeze_seperators(input_string):
-    return sub(MULTIPLE_SEPERATORS, SEPERATOR, input_string)
+    return sub(MULTIPLE_DELIMITERS, TAB, input_string)
 
 def slugify(dirty_string):
-    return NOTHING.join([c if c in ascii_letters + digits else SEPERATOR for c in dirty_string])
+    return NOTHING.join([c if c in ascii_letters + digits else TAB for c in dirty_string])
 
 def asciify(unicode_string):
     return normalize('NFKD', unicode_string).encode('ASCII', 'ignore')
