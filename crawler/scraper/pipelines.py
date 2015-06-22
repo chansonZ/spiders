@@ -4,13 +4,15 @@
 
 
 from os import makedirs
+from os.path import exists
 from scrapy.exceptions import DropItem
-from os.path import join
-from csv import DictWriter
+from path import join
+from csv import DictWriter, writer
 
 
-ROOT = '/home/loic/code/wheels/output/wheel-prices'
-DIALECT = 'excel-tab'
+ROOT_FOLDER = '/home/loic/code/wheels/output/wheel-prices'
+CSV_FIELDS = ['timestamp', 'price', 'stock']
+CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
 
 
 class DumpDuplicates(object):
@@ -21,21 +23,17 @@ class DumpDuplicates(object):
 
     def process_item(self, item, spider):
         oops = 'This item is a duplicate'
-
         if 'reviews' in spider.name:
             if item['name'] in self.names:
                 raise DropItem(oops)
             else:
                 self.names.add(item['name'])
-                return item
         elif 'prices' in spider.name:
             if item['slug'] in self.slugs:
                 raise DropItem(oops)
             else:
                 self.slugs.add(item['slug'])
-                return item
-        else:
-            return item
+        return item
 
 
 class DumpProductsWithoutReview(object):
@@ -45,15 +43,13 @@ class DumpProductsWithoutReview(object):
 
     @staticmethod
     def process_item(item, spider):
-        # This filter is for reviews only
-        if 'reviews' not in spider.name:
-            return item
-        if 'review' not in item.keys():
-            raise DropItem('No review written for this product')
+        if 'reviews' in spider.name:
+            if 'review' not in item.keys():
+                raise DropItem('No review for this product')
         return item
 
 
-class SavePricesInsideFileTree(object):
+class SavePricesToFileTree(object):
 
     def __init__(self):
         self.file = str()
@@ -68,30 +64,38 @@ class SavePricesInsideFileTree(object):
         return item
 
     def _register(self, item, spider):
-        self.path = join(ROOT, item['retailer'], item['manufacturer'])
+        self.path = join(ROOT_FOLDER, item['retailer'], item['manufacturer'])
         self.file = item['slug'] + '.csv'
-        self.spider = spider
         self.item = item
+        self.spider = spider
 
     def _save(self):
         try:
-            self._write()
+            self._write_row()
         except IOError:
             self._initialize()
             self.process_item(self.item, self.spider)
 
-    @property
-    def _item(self):
-        return join(self.path, self.file)
-
-    def _write(self):
-        with open(self._item, 'a') as f:
-            w = DictWriter(f, self.item.keys(), dialect=DIALECT)
-            w.writerow(self.item.items())
+    def _write_row(self):
+        with open(join(self.path, self.file), 'a') as f:
+            w = DictWriter(f, CSV_FIELDS)
+            w.writerow(self._extract(CSV_FIELDS, self.item))
 
     def _initialize(self):
-        makedirs(self.path)
-        with open(self._item, 'w') as f:
-            w = DictWriter(f, fieldnames=list(self.item.keys()), dialect=DIALECT)
-            w.writeheader()
+        if not exists(self.path):
+            makedirs(self.path)
+        self._write_header()
 
+    def _write_header(self):
+        with open(join(self.path, self.file), 'w') as f:
+            w = writer(f, delimiter='=')
+            for key, value in self._extract(CSV_HEADER, self.item).items():
+                w.writerow([key, value])
+            w = writer(f, delimiter=',')
+            w.writerow(CSV_FIELDS)
+
+    @staticmethod
+    def _extract(keys, item):
+        """ Extract a subset of a dictionary. """
+        # Taken from http://code.activestate.com/recipes/115417-subset-of-a-dictionary/
+        return reduce(lambda x, y: x.update({y[0]: y[1]}) or x, map(None, keys, map(item.get, keys)), {})

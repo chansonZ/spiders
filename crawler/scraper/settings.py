@@ -14,4 +14,4 @@ DOWNLOADER_MIDDLEWARES = {'scrapy.contrib.downloadermiddleware.useragent.UserAge
 
 ITEM_PIPELINES = {'scraper.pipelines.DumpDuplicates': 300,
                   'scraper.pipelines.DumpProductsWithoutReview': 200,
-                  'scraper.pipelines.SavePricesInsideFileTree': 400}
+                  'scraper.pipelines.SavePricesToFileTree': 400}

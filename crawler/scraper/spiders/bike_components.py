@@ -6,10 +6,10 @@ from scrapy.selector import Selector
 
 from datetime import datetime
 
-from ..items import BikeComponentsPriceLoader, BikeComponentsReviewLoader, Review, Price
+from ..items import PriceLoader, ReviewLoader, Review, Price
 
-MANUFACTURER = u'Fulcrum'
-RETAILER = u'bike-components.de'
+MANUFACTURER = 'Fulcrum'
+RETAILER = 'bike-components.de'
 
 
 class BikeComponents(CrawlSpider):
@@ -23,7 +23,7 @@ class BikeComponentsReviews(BikeComponents):
 
     @staticmethod
     def parse_product(response):
-        loader = BikeComponentsReviewLoader(item=Review(), response=response)
+        loader = ReviewLoader(item=Review(), response=response)
         s = Selector(response=response)
 
         title = s.xpath('//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()').extract()
@@ -52,7 +52,7 @@ class BikeComponentsPrices(BikeComponents):
 
     @staticmethod
     def parse_product(response):
-        loader = BikeComponentsPriceLoader(item=Price(), response=response)
+        loader = PriceLoader(item=Price(), response=response)
         s = Selector(response=response)
 
         title = s.xpath('//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()').extract()
@@ -66,8 +66,8 @@ class BikeComponentsPrices(BikeComponents):
         for price_1, price_2, model, stock in zip(prices_1, prices_2, models, stocks):
             loader.add_value('price', price_1)
             loader.add_value('price', price_2)
-            loader.add_value('hash', u'bike-components')
-            loader.add_value('hash', u'fulcrum')
+            loader.add_value('hash', MANUFACTURER)
+            loader.add_value('hash', RETAILER)
             loader.add_value('hash', title[0])
             loader.add_value('hash', model)
             loader.add_value('stock', stock)
