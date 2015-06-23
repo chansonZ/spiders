@@ -1,28 +1,24 @@
 """ The crawler for Bike Components (https://www.bike-components.de). """
 
+
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
-
 from datetime import datetime
-
 from ..items import PriceLoader, ReviewLoader, Review, Price
-
-MANUFACTURER = 'Fulcrum'
-RETAILER = 'bike-components.de'
 
 
 class BikeComponents(CrawlSpider):
     allowed_domains = ['bike-components.de']
     start_urls = ['https://www.bike-components.de/en/Fulcrum/']
     rules = [Rule(Extractor(allow='/en/Fulcrum/\w+'), callback='parse_product'), Rule(Extractor(allow='page='))]
-
+    manufacturer = 'Fulcrum'
+    retailer = 'bike-components.de'
 
 class BikeComponentsReviews(BikeComponents):
     name = 'bike-components-reviews'
 
-    @staticmethod
-    def parse_product(response):
+    def parse_product(self, response):
         loader = ReviewLoader(item=Review(), response=response)
         s = Selector(response=response)
 
@@ -37,8 +33,8 @@ class BikeComponentsReviews(BikeComponents):
         for rating, date, author, review in zip(ratings, dates, authors, reviews):
             loader.add_value('name', title)
             loader.add_value('url', response.url)
-            loader.add_value('manufacturer', MANUFACTURER)
-            loader.add_value('retailer', RETAILER)
+            loader.add_value('manufacturer', self.manufacturer)
+            loader.add_value('retailer', self.retailer)
             loader.add_value('rating', rating)
             loader.add_value('date', date)
             loader.add_value('author', author)
@@ -50,8 +46,7 @@ class BikeComponentsReviews(BikeComponents):
 class BikeComponentsPrices(BikeComponents):
     name = 'bike-components-prices'
 
-    @staticmethod
-    def parse_product(response):
+    def parse_product(self, response):
         loader = PriceLoader(item=Price(), response=response)
         s = Selector(response=response)
 
@@ -63,11 +58,12 @@ class BikeComponentsPrices(BikeComponents):
         stocks = s.xpath('//*[@id="module-product-item-description"]/div/ul/li/span[3]/text()').extract()
 
         # A single product page may contain multiple models.
+        # From a scraping point of view, each model is one item.
         for price_1, price_2, model, stock in zip(prices_1, prices_2, models, stocks):
             loader.add_value('price', price_1)
             loader.add_value('price', price_2)
-            loader.add_value('hash', MANUFACTURER)
-            loader.add_value('hash', RETAILER)
+            loader.add_value('hash', self.manufacturer)
+            loader.add_value('hash', self.retailer)
             loader.add_value('hash', title[0])
             loader.add_value('hash', model)
             loader.add_value('stock', stock)
@@ -77,7 +73,7 @@ class BikeComponentsPrices(BikeComponents):
             loader.add_value('id', id_[0])
             loader.add_value('url', response.url)
             loader.add_value('timestamp', datetime.now())
-            loader.add_value('manufacturer', MANUFACTURER)
-            loader.add_value('retailer', RETAILER)
+            loader.add_value('manufacturer', self.manufacturer)
+            loader.add_value('retailer', self.retailer)
 
             yield loader.load_item()
