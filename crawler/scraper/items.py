@@ -1,39 +1,38 @@
 """ This module specifies how we process each product on each website. """
 
+
 from scrapy import Field, Item
 from scrapy.contrib.loader import ItemLoader
 from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Identity
-
 from .utilities import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date
-from .utilities import parse_price, parse_stock, trim_edges, SLUG_DELIMITER, parse_author
+from .utilities import parse_price, parse_stock, trim_edges, parse_author, slug_delimiter
 
 
-DEFAULT_PROCESSORS = {'input_processor': Identity(),
-                      'output_processor': TakeFirst()}
+_default_processors = {'input_processor': Identity(), 'output_processor': TakeFirst()}
 
 
 class Product(Item):
-    name = Field(**DEFAULT_PROCESSORS)
-    model = Field(**DEFAULT_PROCESSORS)
-    slug = Field(**DEFAULT_PROCESSORS)
-    hash = Field(**DEFAULT_PROCESSORS)
-    url = Field(**DEFAULT_PROCESSORS)
-    id = Field(**DEFAULT_PROCESSORS)
-    retailer = Field(**DEFAULT_PROCESSORS)
-    manufacturer = Field(**DEFAULT_PROCESSORS)
+    name = Field(**_default_processors)
+    model = Field(**_default_processors)
+    slug = Field(**_default_processors)
+    hash = Field(**_default_processors)
+    url = Field(**_default_processors)
+    id = Field(**_default_processors)
+    retailer = Field(**_default_processors)
+    manufacturer = Field(**_default_processors)
 
 
 class Price(Product):
-    price = Field(**DEFAULT_PROCESSORS)
-    timestamp = Field(**DEFAULT_PROCESSORS)
-    stock = Field(**DEFAULT_PROCESSORS)
+    price = Field(**_default_processors)
+    timestamp = Field(**_default_processors)
+    stock = Field(**_default_processors)
 
 
 class Review(Product):
-    review = Field(**DEFAULT_PROCESSORS)
-    date = Field(**DEFAULT_PROCESSORS)
-    author = Field(**DEFAULT_PROCESSORS)
-    rating = Field(**DEFAULT_PROCESSORS)
+    review = Field(**_default_processors)
+    date = Field(**_default_processors)
+    author = Field(**_default_processors)
+    rating = Field(**_default_processors)
 
 
 class ProductLoader(ItemLoader):
@@ -42,7 +41,7 @@ class ProductLoader(ItemLoader):
     name_in = MapCompose(strip_edges)
     slug_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
     hash_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
-    hash_out = Join(separator=SLUG_DELIMITER)
+    hash_out = Join(separator=slug_delimiter)
     retailer_in = MapCompose(asciify)
     manufacturer_in = MapCompose(asciify)
 

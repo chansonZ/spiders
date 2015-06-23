@@ -1,18 +1,12 @@
-""" This module contains all the pipelines used after the scraping is done.
-    See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html.
-"""
-from genericpath import isfile
+""" This module has all the pipelines. See http://doc.scrapy.org/en/latest/topics/item-pipeline.html. """
 
+
+from genericpath import isfile
 from os import makedirs
 from os.path import exists
 from scrapy.exceptions import DropItem
 from os.path import join
 from csv import DictWriter, writer
-
-
-ROOT_FOLDER = '/home/loic/code/wheels/output/wheel-prices'
-CSV_FIELDS = ['timestamp', 'price', 'stock']
-CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
 
 
 class DumpDuplicates(object):
@@ -50,53 +44,56 @@ class DumpProductsWithoutReview(object):
 
 
 class SavePricesToFileTree(object):
+    ROOT_FOLDER = '/home/loic/code/wheels/output/wheel-prices'
+    CSV_FIELDS = ['timestamp', 'price', 'stock']
+    CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
 
     def __init__(self):
         self.file = str()
         self.path = str()
         self.item = None
-        self.spider = None
 
     def process_item(self, item, spider):
         if 'prices' in spider.name:
-            self._register(item, spider)
-            if isfile(self._item_file):
-                self._write_row()
+            self._register(item)
+            if isfile(self._csv_file):
+                self._write()
+                return item
             else:
                 self._initialize()
-                self.process_item(self.item, self.spider)
-        return item
+                self.process_item(item, spider)
 
-    def _register(self, item, spider):
-        self.path = join(ROOT_FOLDER, item['retailer'], item['manufacturer'])
+    def _register(self, item):
+        self.path = join(self.ROOT_FOLDER, item['retailer'], item['manufacturer'])
         self.file = item['slug'] + '.csv'
         self.item = item
-        self.spider = spider
 
     @property
-    def _item_file(self):
+    def _csv_file(self):
         return join(self.path, self.file)
 
-    def _write_row(self):
-        with open(self._item_file, 'a') as f:
-            w = DictWriter(f, CSV_FIELDS)
-            w.writerow(self._extract(CSV_FIELDS, self.item))
+    def _write(self):
+        with open(self._csv_file, 'a') as f:
+            w = DictWriter(f, self.CSV_FIELDS)
+            w.writerow(self._squeeze_out(self.CSV_FIELDS, self.item))
 
     def _initialize(self):
         if not exists(self.path):
             makedirs(self.path)
-        self._write_header()
+        self._create_file()
 
-    def _write_header(self):
-        with open(self._item_file, 'w') as f:
+    def _create_file(self):
+        with open(self._csv_file, 'w') as f:
+            # Write meta-info to header
             w = writer(f, delimiter='=')
-            for key, value in self._extract(CSV_HEADER, self.item).items():
+            for key, value in self._squeeze_out(self.CSV_HEADER, self.item).items():
                 w.writerow([key, value])
+            # List column names.
             w = writer(f, delimiter=',')
-            w.writerow(CSV_FIELDS)
+            w.writerow(self.CSV_FIELDS)
 
     @staticmethod
-    def _extract(keys, item):
+    def _squeeze_out(subset_keys, item):
         """ Extract a subset of a dictionary. """
         # Taken from http://code.activestate.com/recipes/115417-subset-of-a-dictionary/
-        return reduce(lambda x, y: x.update({y[0]: y[1]}) or x, map(None, keys, map(item.get, keys)), {})
+        return reduce(lambda x, y: x.update({y[0]: y[1]}) or x, map(None, subset_keys, map(item.get, subset_keys)), {})
