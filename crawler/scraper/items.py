@@ -1,4 +1,4 @@
-""" This module specifies how we process each product on each website. """
+""" This module specifies how we process the fields that we scrape. """
 
 
 from scrapy import Field, Item
@@ -8,9 +8,12 @@ from .utilities import slugify, asciify, force_lower, strip_edges, squeeze_seper
 from .utilities import parse_price, parse_stock, trim_edges, parse_author, SLUG_SEPERATOR
 
 
-#####################################################################################################################
-
 _default_processors = {'input_processor': Identity(), 'output_processor': TakeFirst()}
+_sanitize = [strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges, str]
+
+
+################################################################
+# Generic processors
 
 class Product(Item):
     name = Field(**_default_processors)
@@ -34,44 +37,52 @@ class Review(Product):
     author = Field(**_default_processors)
     rating = Field(**_default_processors)
 
-#####################################################################################################################
+
+################################################################
+# Processors for bike-components.de
 
 class BikeComponentsLoader(ItemLoader):
-    model_in = MapCompose(asciify)
-    id_in = MapCompose(strip_edges, asciify)
-    name_in = MapCompose(strip_edges)
-    slug_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
-    hash_in = MapCompose(strip_edges, asciify, slugify, force_lower, squeeze_seperators, trim_edges)
+    model_in = MapCompose(asciify, str)
+    id_in = MapCompose(strip_edges, asciify, str)
+    name_in = MapCompose(strip_edges, unicode)
+    slug_in = MapCompose(*_sanitize)
+    hash_in = MapCompose(*_sanitize)
     hash_out = Join(separator=SLUG_SEPERATOR)
-    retailer_in = MapCompose(asciify)
-    manufacturer_in = MapCompose(asciify)
+    retailer_in = MapCompose(*_sanitize)
+    manufacturer_in = MapCompose(*_sanitize)
+
 
 class BikeComponentsPriceLoader(BikeComponentsLoader):
-    stock_in = MapCompose(parse_stock)
+    stock_in = MapCompose(parse_stock, bool)
     price_in = MapCompose(strip_edges, parse_price, float)
 
+
 class BikeComponentsReviewLoader(BikeComponentsLoader):
-    review_in = MapCompose(strip_edges)
-    rating_in = MapCompose(strip_edges, parse_rating)
-    author_in = MapCompose(strip_edges, parse_author)
+    review_in = MapCompose(strip_edges, unicode)
+    rating_in = MapCompose(strip_edges, parse_rating, int)
+    author_in = MapCompose(strip_edges, parse_author, unicode)
     date_in = MapCompose(strip_edges, parse_date)
 
-#####################################################################################################################
+
+################################################################
+# Processors for chainreactioncycles.com
 
 class ChainReactionLoader(ItemLoader):
-    model_in = MapCompose(asciify)
-    id_in = MapCompose(asciify)
-    name_in = MapCompose()
-    slug_in = MapCompose(asciify, slugify, force_lower, squeeze_seperators, trim_edges)
+    model_in = MapCompose(asciify, str)
+    id_in = MapCompose(asciify, str)
+    name_in = MapCompose(unicode)
+    slug_in = MapCompose(*_sanitize)
     slug_out = Join(separator=SLUG_SEPERATOR)
-    hash_in = MapCompose(asciify, slugify, force_lower, squeeze_seperators, trim_edges)
+    hash_in = MapCompose(*_sanitize)
     hash_out = Join(separator=SLUG_SEPERATOR)
-    retailer_in = MapCompose(asciify)
-    manufacturer_in = MapCompose(asciify)
+    retailer_in = MapCompose(*_sanitize)
+    manufacturer_in = MapCompose(*_sanitize)
+
 
 class ChainReactionPriceLoader(ChainReactionLoader):
     price_in = MapCompose(asciify, float)
     saving_in = MapCompose(asciify, float)
+
 
 class ChainReactionReviewLoader(ChainReactionLoader):
     pass

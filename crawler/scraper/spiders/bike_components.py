@@ -13,7 +13,7 @@ class BikeComponents(CrawlSpider):
     start_urls = ['https://www.bike-components.de/en/Fulcrum/']
     rules = [Rule(Extractor(allow='/en/Fulcrum/\w+'), callback='parse_product'), Rule(Extractor(allow='page='))]
     manufacturer = 'Fulcrum'
-    retailer = 'bike-components.de'
+    retailer = 'Bike Components'
 
 class BikeComponentsReviews(BikeComponents):
     name = 'bike-components-reviews'

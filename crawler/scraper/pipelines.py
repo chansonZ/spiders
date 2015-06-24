@@ -54,9 +54,9 @@ class CheckMissingFields(object):
 
 class SavePricesToFileTree(object):
 
-    CSV_FIELDS = ['timestamp', 'price', 'stock']
-    CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
-    TOP_FOLDER = abspath(join(dirname(__file__), '../..', 'output', 'wheel-prices'))
+    _CSV_FIELDS = ['timestamp', 'price', 'stock']
+    _CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
+    _ROOT_DIR = abspath(join(dirname(__file__), '../..', 'output', 'wheel-prices'))
 
     def __init__(self):
         self.file = None
@@ -68,13 +68,13 @@ class SavePricesToFileTree(object):
             self._register(item)
             if isfile(self._csv_file):
                 self._write()
-        else:
+            else:
                 self._initialize()
                 self.process_item(item, spider)
         return item
 
     def _register(self, item):
-        self.path = join(self.TOP_FOLDER, item['retailer'], item['manufacturer'])
+        self.path = join(self._ROOT_DIR, item['retailer'], item['manufacturer'])
         self.file = item['slug'] + '.csv'
         self.item = item
 
@@ -84,8 +84,8 @@ class SavePricesToFileTree(object):
 
     def _write(self):
         with open(self._csv_file, 'a') as f:
-            w = DictWriter(f, self.CSV_FIELDS)
-            w.writerow(self._squeeze_out(self.CSV_FIELDS, self.item))
+            w = DictWriter(f, self._CSV_FIELDS)
+            w.writerow(self._squeeze_out(self._CSV_FIELDS, self.item))
 
     def _initialize(self):
         if not exists(self.path):
@@ -95,10 +95,10 @@ class SavePricesToFileTree(object):
     def _create_file(self):
         with open(self._csv_file, 'w') as f:
             w = writer(f, delimiter='=')
-            for key, value in self._squeeze_out(self.CSV_HEADER, self.item).items():
+            for key, value in self._squeeze_out(self._CSV_HEADER, self.item).items():
                 w.writerow([key, value])
             w = writer(f, delimiter=',')
-            w.writerow(self.CSV_FIELDS)
+            w.writerow(self._CSV_FIELDS)
 
     @staticmethod
     def _squeeze_out(subset_keys, item):

@@ -19,10 +19,10 @@ _price_regex = r'(?P<price>(\d+\.)*\d+,\d{2})'
 
 
 def parse_stock(input_string):
-    return bool('in stock' in input_string)
+    return 'stock' in input_string.lower()
 
 def parse_rating(rating_string):
-    return int(rating_string[0])
+    return rating_string[0]
 
 def parse_author(author_and_date):
     return match(_author_regex, author_and_date).group('author')
@@ -51,8 +51,6 @@ def force_lower(text):
 def parse_price(raw_price):
     return match(_price_regex, raw_price).group('price').replace('.', '').replace(',', '.')
 
-def force_float(text):
-    return float(text)
 
 if __name__ == '__main__':
     pass
