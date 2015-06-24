@@ -2,11 +2,16 @@
 """ The crawler for Chain Reaction (https://www.chainreactioncycles.com). """
 
 
+from scrapy import Request
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
 from datetime import datetime
-from ..items import Review, Price, ChainReactionPriceLoader
+from ..items import Review, Price, ChainReactionPriceLoader, ChainReactionReviewLoader
+
+
+RETAILER = 'Chain Reaction'
+MANUFACTURER = 'Fulcrum'
 
 
 class ChainReaction(CrawlSpider):
@@ -14,10 +19,16 @@ class ChainReaction(CrawlSpider):
     allowed_domains = ['chainreactioncycles.com']
     start_urls = ['http://www.chainreactioncycles.com/de/de/fulcrum']
     rules = [Rule(Extractor(allow='/de/fulcrum-\w+'), callback='parse_product'), Rule(Extractor(allow='page='))]
+
     response = None
+
+
+class ChainReactionPrices(ChainReaction):
+    name = 'chain-reaction-prices'
 
     def parse_product(self, response):
         self.response = response
+
         selector = Selector(response=response)
 
         ids = selector.re('"skuId":"(\w+)"')
@@ -26,34 +37,59 @@ class ChainReaction(CrawlSpider):
         prices = selector.re(r'"RP":".(\d+\.\d{2})"')
         name = selector.re('productDisplayName="(.+?)"')
 
-        return self.load(prices, savings, ids, name[0], options)
-
-    def load(self, *fields):
-        pass
-
-
-class ChainReactionPrices(ChainReaction):
-    name = 'chain-reaction-prices'
+        items = self.load(prices, savings, ids, name[0], options)
+        return items
 
     def load(self, prices, savings, ids, name, options):
 
-        for price, saving, option in zip(prices, savings, options):
+        for price, saving, option, id_ in zip(prices, savings, options, ids):
             loader = ChainReactionPriceLoader(item=Price(), response=self.response)
 
+            loader.add_value('id', id_)
             loader.add_value('timestamp', datetime.now())
             loader.add_value('price', price)
             loader.add_value('saving', saving)
-            loader.add_value('hash', 'Chain Reaction')
+            loader.add_value('hash', RETAILER)
             loader.add_value('hash', name)
             loader.add_value('hash', option)
             loader.add_value('slug', name)
             loader.add_value('slug', option)
             loader.add_value('model', option)
             loader.add_value('name', name)
-            loader.add_value('retailer', 'Chain Reaction')
-            loader.add_value('manufacturer', 'Fulcrum')
+            loader.add_value('retailer', RETAILER)
+            loader.add_value('manufacturer', MANUFACTURER)
+
             yield loader.load_item()
 
 
 class ChainReactionReviews(ChainReaction):
     name = 'chain-reaction-reviews'
+
+    response = None
+    selector = None
+    items = list()
+    loader = None
+
+    def _register(self, response):
+        self.loader = ChainReactionReviewLoader(item=Review(), response=self.response)
+        self.selector = Selector(response=response)
+        self.response = response
+
+    def parse_product(self, response):
+        self._register(response)
+
+        self.loader.add_value('slug', self.selector.re('productDisplayName="(.+?)"'))
+        self.loader.add_value('name', self.selector.re('productDisplayName="(.+?)"'))
+        self.loader.add_value('retailer', RETAILER)
+        self.loader.add_value('manufacturer', MANUFACTURER)
+
+        self.items.append(self.loader.load_item())
+        return Request(response.url + '/reviews.djs?format=embeddedhtml', callback=self.parse_reviews)
+
+    def parse_reviews(self, response):
+        self._register(response)
+
+        return self.items
+
+
+
