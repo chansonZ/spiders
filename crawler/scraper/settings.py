@@ -10,5 +10,5 @@ DOWNLOADER_MIDDLEWARES = {'scrapy.contrib.downloadermiddleware.useragent.UserAge
                           'scraper.middlewares.user_agents.RotateUserAgentMiddleware': 400}
 
 ITEM_PIPELINES = {'scraper.pipelines.DumpDuplicates': 300,
-                  'scraper.pipelines.DumpProductsWithoutReview': 200,
+                  'scraper.pipelines.CheckMissingFields': 200,
                   'scraper.pipelines.SavePricesToFileTree': 400}

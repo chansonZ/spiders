@@ -5,7 +5,7 @@ from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
 from datetime import datetime
-from ..items import PriceLoader, ReviewLoader, Review, Price
+from ..items import BikeComponentsPriceLoader, BikeComponentsReviewLoader, Review, Price
 
 
 class BikeComponents(CrawlSpider):
@@ -19,7 +19,7 @@ class BikeComponentsReviews(BikeComponents):
     name = 'bike-components-reviews'
 
     def parse_product(self, response):
-        loader = ReviewLoader(item=Review(), response=response)
+        loader = BikeComponentsReviewLoader(item=Review(), response=response)
         s = Selector(response=response)
 
         title = s.xpath('//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()').extract()
@@ -47,7 +47,7 @@ class BikeComponentsPrices(BikeComponents):
     name = 'bike-components-prices'
 
     def parse_product(self, response):
-        loader = PriceLoader(item=Price(), response=response)
+        l = BikeComponentsPriceLoader(item=Price(), response=response)
         s = Selector(response=response)
 
         title = s.xpath('//div[@id="module-product-item"]/div[3]/div[1]/h1/span/text()').extract()
@@ -60,20 +60,20 @@ class BikeComponentsPrices(BikeComponents):
         # A single product page may contain multiple models.
         # From a scraping point of view, each model is one item.
         for price_1, price_2, model, stock in zip(prices_1, prices_2, models, stocks):
-            loader.add_value('price', price_1)
-            loader.add_value('price', price_2)
-            loader.add_value('hash', self.manufacturer)
-            loader.add_value('hash', self.retailer)
-            loader.add_value('hash', title[0])
-            loader.add_value('hash', model)
-            loader.add_value('stock', stock)
-            loader.add_value('name', title[0])
-            loader.add_value('model', model)
-            loader.add_value('slug', title[0])
-            loader.add_value('id', id_[0])
-            loader.add_value('url', response.url)
-            loader.add_value('timestamp', datetime.now())
-            loader.add_value('manufacturer', self.manufacturer)
-            loader.add_value('retailer', self.retailer)
+            l.add_value('price', price_1)
+            l.add_value('price', price_2)
+            l.add_value('hash', self.manufacturer)
+            l.add_value('hash', self.retailer)
+            l.add_value('hash', title[0])
+            l.add_value('hash', model)
+            l.add_value('stock', stock)
+            l.add_value('name', title[0])
+            l.add_value('model', model)
+            l.add_value('slug', title[0])
+            l.add_value('id', id_[0])
+            l.add_value('url', response.url)
+            l.add_value('timestamp', datetime.now())
+            l.add_value('manufacturer', self.manufacturer)
+            l.add_value('retailer', self.retailer)
 
-            yield loader.load_item()
+            yield l.load_item()

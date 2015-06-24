@@ -1,9 +1,9 @@
-""" This module has all the pipelines. See http://doc.scrapy.org/en/latest/topics/item-pipeline.html. """
+""" This module contains all the pipelines. See http://doc.scrapy.org/en/latest/topics/item-pipeline.html. """
 
 
 from genericpath import isfile
 from os import makedirs
-from os.path import exists
+from os.path import exists, dirname, abspath
 from scrapy.exceptions import DropItem
 from os.path import join
 from csv import DictWriter, writer
@@ -12,25 +12,25 @@ from csv import DictWriter, writer
 class DumpDuplicates(object):
 
     def __init__(self):
-        self.slugs = set()
-        self.names = set()
+        self.reviews = set()
+        self.hashes = set()
 
     def process_item(self, item, spider):
         oops = 'This item is a duplicate'
         if 'reviews' in spider.name:
-            if item['name'] in self.names:
+            if item['review'] in self.reviews:
                 raise DropItem(oops)
             else:
-                self.names.add(item['name'])
+                self.reviews.add(item['review'])
         elif 'prices' in spider.name:
-            if item['slug'] in self.slugs:
+            if item['hash'] in self.hashes:
                 raise DropItem(oops)
             else:
-                self.slugs.add(item['slug'])
+                self.hashes.add(item['hash'])
         return item
 
 
-class DumpProductsWithoutReview(object):
+class CheckMissingFields(object):
 
     def __init__(self):
         pass
@@ -39,18 +39,28 @@ class DumpProductsWithoutReview(object):
     def process_item(item, spider):
         if 'reviews' in spider.name:
             if 'review' not in item.keys():
-                raise DropItem('No review for this product')
+                raise DropItem('No review field for this product')
+        elif 'prices' in spider.name:
+            if 'hash' not in item.keys():
+                raise DropItem('No hash field for this product')
+            if 'slug' not in item.keys():
+                raise DropItem('No slug field for this product')
+            if 'retailer' not in item.keys():
+                raise DropItem('No retailer field for this product')
+            if 'manufacturer' not in item.keys():
+                raise DropItem('No manufacturer field for this product')
         return item
 
 
 class SavePricesToFileTree(object):
-    ROOT_FOLDER = '/home/loic/code/wheels/output/wheel-prices'
+
     CSV_FIELDS = ['timestamp', 'price', 'stock']
     CSV_HEADER = ['slug', 'model', 'manufacturer', 'retailer', 'id', 'url']
+    TOP_FOLDER = abspath(join(dirname(__file__), '../..', 'output', 'wheel-prices'))
 
     def __init__(self):
-        self.file = str()
-        self.path = str()
+        self.file = None
+        self.path = None
         self.item = None
 
     def process_item(self, item, spider):
@@ -58,13 +68,13 @@ class SavePricesToFileTree(object):
             self._register(item)
             if isfile(self._csv_file):
                 self._write()
-                return item
-            else:
+        else:
                 self._initialize()
                 self.process_item(item, spider)
+        return item
 
     def _register(self, item):
-        self.path = join(self.ROOT_FOLDER, item['retailer'], item['manufacturer'])
+        self.path = join(self.TOP_FOLDER, item['retailer'], item['manufacturer'])
         self.file = item['slug'] + '.csv'
         self.item = item
 
@@ -84,11 +94,9 @@ class SavePricesToFileTree(object):
 
     def _create_file(self):
         with open(self._csv_file, 'w') as f:
-            # Write meta-info to header
             w = writer(f, delimiter='=')
             for key, value in self._squeeze_out(self.CSV_HEADER, self.item).items():
                 w.writerow([key, value])
-            # List column names.
             w = writer(f, delimiter=',')
             w.writerow(self.CSV_FIELDS)
 
