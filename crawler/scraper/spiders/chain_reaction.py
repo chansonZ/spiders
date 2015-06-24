@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" The crawler for Bike Components (https://www.bike-components.de). """
+""" The crawler for Chain Reaction (https://www.chainreactioncycles.com). """
 
 
 from scrapy.contrib.spiders import CrawlSpider, Rule
@@ -14,38 +14,46 @@ class ChainReaction(CrawlSpider):
     allowed_domains = ['chainreactioncycles.com']
     start_urls = ['http://www.chainreactioncycles.com/de/de/fulcrum']
     rules = [Rule(Extractor(allow='/de/fulcrum-\w+'), callback='parse_product'), Rule(Extractor(allow='page='))]
-    manufacturer = 'Fulcrum'
-    retailer = name
+    response = None
+
+    def parse_product(self, response):
+        self.response = response
+        selector = Selector(response=response)
+
+        ids = selector.re('"skuId":"(\w+)"')
+        savings = selector.re('"SAVE":"(\d+)%"')
+        options = selector.re('"Option":"(.+?)"')
+        prices = selector.re(r'"RP":".(\d+\.\d{2})"')
+        name = selector.re('productDisplayName="(.+?)"')
+
+        return self.load(prices, savings, ids, name[0], options)
+
+    def load(self, *fields):
+        pass
 
 
 class ChainReactionPrices(ChainReaction):
     name = 'chain-reaction-prices'
 
-    def parse_product(self, response):
-        s = Selector(response=response)
+    def load(self, prices, savings, ids, name, options):
 
-        prices = s.re(r'"RP":".(\d+\.\d{2})"')
-        savings = s.re('"SAVE":"(\d+)%"')
-        ids = s.re('"skuId":"(\w+)"')
-        name = s.re('productDisplayName="(.+?)"')
-        options = s.re('"Option":"(.+?)"')
+        for price, saving, option in zip(prices, savings, options):
+            loader = ChainReactionPriceLoader(item=Price(), response=self.response)
 
-        for price, saving, id_, option in zip(prices, savings, ids, options):
-            l = ChainReactionPriceLoader(item=Price(), response=response)
+            loader.add_value('timestamp', datetime.now())
+            loader.add_value('price', price)
+            loader.add_value('saving', saving)
+            loader.add_value('hash', 'Chain Reaction')
+            loader.add_value('hash', name)
+            loader.add_value('hash', option)
+            loader.add_value('slug', name)
+            loader.add_value('slug', option)
+            loader.add_value('model', option)
+            loader.add_value('name', name)
+            loader.add_value('retailer', 'Chain Reaction')
+            loader.add_value('manufacturer', 'Fulcrum')
+            yield loader.load_item()
 
-            l.add_value('timestamp', datetime.now())
-            l.add_value('price', price)
-            l.add_value('saving', saving)
-            l.add_value('hash', self.retailer)
-            l.add_value('hash', name[0])
-            l.add_value('hash', option)
-            l.add_value('slug', name[0])
-            l.add_value('slug', option)
-            l.add_value('model', option)
-            l.add_value('name', name[0])
-            l.add_value('id', id_)
-            l.add_value('retailer', self.retailer)
-            l.add_value('manufacturer', self.manufacturer)
 
-            yield l.load_item()
-
+class ChainReactionReviews(ChainReaction):
+    name = 'chain-reaction-reviews'
