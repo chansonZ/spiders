@@ -67,13 +67,14 @@ class ChainReactionReviews(ChainReaction):
 
     response = None
     selector = None
-    items = list()
+    item = None
     loader = None
 
     def _register(self, response):
-        self.loader = ChainReactionReviewLoader(item=Review(), response=self.response)
-        self.selector = Selector(response=response)
         self.response = response
+        self.selector = Selector(response=response)
+        self.item = response.meta['item'] if 'item' in response.meta.keys() else Review()
+        self.loader = ChainReactionReviewLoader(self.item, response=self.response)
 
     def parse_product(self, response):
         self._register(response)
@@ -83,13 +84,16 @@ class ChainReactionReviews(ChainReaction):
         self.loader.add_value('retailer', RETAILER)
         self.loader.add_value('manufacturer', MANUFACTURER)
 
-        self.items.append(self.loader.load_item())
-        return Request(response.url + '/reviews.djs?format=embeddedhtml', callback=self.parse_reviews)
+        request = Request(response.url + '/reviews.djs?format=embeddedhtml', callback=self.parse_reviews)
+        request.meta['item'] = self.loader.load_item()
+
+        return request
 
     def parse_reviews(self, response):
         self._register(response)
 
-        return self.items
+        self.loader.add_value('review', 'review')
+        self.loader.add_value('author', 'author')
+        self.loader.add_value('date', 'date')
 
-
-
+        return self.loader.load_item()
