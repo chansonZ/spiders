@@ -11,11 +11,14 @@ from datetime import datetime
 
 SLUG_SEPERATOR = '-'
 
-_multiple_seperators_regex = '%s{2,}' % SLUG_SEPERATOR
-_edge_seperators_regex = r'^-|-$'
+_multiple_seperators_regex = '%s{2,}' % SLUG_SEPERATOR  # eg. bla-bla--bla
+_edge_seperators_regex = r'^-|-$'  # eg. -bla-bla-bla-
+
 _author_regex = r'(?P<author>^.+?)(?= on)'
-_date_regex = r'(?:.*)(?P<date>\d{2}\.\d{2}\.\d{4})'
-_price_regex = r'(?P<price>(\d+\.)*\d+,\d{2})'
+_date_regex = r'(?:.*)(?P<date>\d{2}\.\d{2}\.\d{4})'  # eg. 12.03.1978
+#_price_regex = r'(?P<price>(\d+\.)*\d+,\d{2})'  # eg. 87,43 or 1.986,98
+_price_regex = r'(?P<price>(\d+\.)*\d+,\d{2}*)'  # eg. 87,43 or 1.986,98
+_id_regex = r'(\d)'  # eg. 9835483
 
 
 def parse_stock(input_string):
@@ -51,6 +54,10 @@ def force_lower(text):
 def parse_price(raw_price):
     return match(_price_regex, raw_price).group('price').replace('.', '').replace(',', '.')
 
+def parse_id(raw_id):
+    a = match(_id_regex, raw_id)
+    if a:
+        return a.group(0)
 
 if __name__ == '__main__':
     pass
