@@ -4,8 +4,9 @@
 from scrapy import Field, Item
 from scrapy.contrib.loader import ItemLoader
 from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Identity
-from .utilities import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date
-from .utilities import parse_price, parse_stock, trim_edges, parse_author, SLUG_SEPERATOR
+from .processors import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date, \
+    parse_id
+from .processors import parse_price, parse_stock, trim_edges, parse_author, SLUG_SEPERATOR
 
 
 _default_processors = {'input_processor': Identity(), 'output_processor': TakeFirst()}
@@ -13,7 +14,7 @@ _sanitize = [strip_edges, asciify, slugify, force_lower, squeeze_seperators, tri
 
 
 ################################################################
-# Generic processors
+# Define what we scrape
 
 class Product(Item):
     name = Field(**_default_processors)
@@ -85,4 +86,26 @@ class ChainReactionPriceLoader(ChainReactionLoader):
 
 
 class ChainReactionReviewLoader(ChainReactionLoader):
+    pass
+
+
+################################################################
+# Processors for bruegelmann.de
+
+class BruegelmannLoader(ItemLoader):
+    model_in = MapCompose(asciify, str)
+    id_in = MapCompose(strip_edges, asciify, parse_id, str)
+    name_in = MapCompose(strip_edges, unicode)
+    slug_in = MapCompose(*_sanitize)
+    hash_in = MapCompose(*_sanitize)
+    hash_out = Join(separator=SLUG_SEPERATOR)
+    retailer_in = MapCompose(*_sanitize)
+    manufacturer_in = MapCompose(*_sanitize)
+
+
+class BruegelmannPriceLoader(BruegelmannLoader):
+    price_in = MapCompose(asciify, parse_price, float)
+
+
+class BruegelmannReviewLoader(BruegelmannLoader):
     pass
