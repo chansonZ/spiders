@@ -5,7 +5,7 @@ This module provides a pool of user-agents for the spider. Inspired by:
 """
 
 from random import choice
-from scrapy.contrib.downloadermiddleware.useragent import UserAgentMiddleware
+from scrapy.downloadermiddlewares.useragent import UserAgentMiddleware
 
 
 USER_AGENTS =  \

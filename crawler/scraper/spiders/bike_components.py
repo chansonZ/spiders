@@ -1,8 +1,8 @@
 """ The crawler for Bike Components (https://www.bike-components.de). """
 
 
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
 from datetime import datetime
 from ..items import BikeComponentsPriceLoader, BikeComponentsReviewLoader, Review, Price

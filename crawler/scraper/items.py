@@ -2,11 +2,10 @@
 
 
 from scrapy import Field, Item
-from scrapy.contrib.loader import ItemLoader
-from scrapy.contrib.loader.processor import MapCompose, Join, TakeFirst, Identity
-from .processors import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date, \
-    parse_id
-from .processors import parse_price, parse_stock, trim_edges, parse_author, SLUG_SEPERATOR
+from scrapy.loader import ItemLoader
+from scrapy.loader.processors import MapCompose, Join, TakeFirst, Identity
+from .processors import slugify, asciify, force_lower, strip_edges, squeeze_seperators, parse_rating, parse_date
+from .processors import parse_price, parse_stock, trim_edges, parse_author, SLUG_SEPERATOR, parse_id
 
 
 _default_processors = {'input_processor': Identity(), 'output_processor': TakeFirst()}
@@ -37,6 +36,9 @@ class Review(Product):
     date = Field(**_default_processors)
     author = Field(**_default_processors)
     rating = Field(**_default_processors)
+
+class PriceAndReviews(Price, Review):
+    pass
 
 
 ################################################################
@@ -101,11 +103,3 @@ class BruegelmannLoader(ItemLoader):
     hash_out = Join(separator=SLUG_SEPERATOR)
     retailer_in = MapCompose(*_sanitize)
     manufacturer_in = MapCompose(*_sanitize)
-
-
-class BruegelmannPriceLoader(BruegelmannLoader):
-    price_in = MapCompose(asciify, parse_price, float)
-
-
-class BruegelmannReviewLoader(BruegelmannLoader):
-    pass
