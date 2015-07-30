@@ -45,26 +45,21 @@ class Bruegelmann(Spider):
         total_pages = int(select.xpath(_total_pages_xpath).extract()[0])
         manufacturer_id = int(select.xpath(_manufacturer_id_xpath).extract()[0])
         query = {'intPage': None, 'intManufacturerId': manufacturer_id}
-        ajax_url = self.website.with_path('filter')
+        ajax_url = self.website.with_path('ajax/filter')
         for query['intPage'] in range(1, total_pages):
             yield Request(callback=self._collect_urls_from_json, url=str(ajax_url.with_params(query)))
 
-    def visit_products(self, product_urls):
+    def _collect_urls_from_json(self, response):
+        json = loads(response.body)
+        html_tree = fromstring(json['content'])
+        product_urls = html_tree.xpath(_product_url_xpath)
+
         for product_url in product_urls:
             yield Request(callback=self.parse_product, url=product_url)
 
-    def _collect_urls_from_json(self, response):
-        select = Selector(response=response)
-
-        html_text = loads(select.response.body)
-        html_tree = fromstring(html_text)
-        product_urls = html_tree.xpath(_product_url_xpath)
-
-        self.visit_products(product_urls)
-
     @counted
     def parse_product(self, response):
-        pass
+        return None
 
 
 class BruegelmannPrice(Bruegelmann):
