@@ -13,7 +13,7 @@ def counted(function):
 class UrlBuilder:
     # See http://stackoverflow.com/questions/1590219/url-builder-for-python
 
-    def __init__(self, domain,path="blah", params="foo=bar"):
+    def __init__(self, domain, path='', params=''):
         self.domain = domain
         self.path = path
         self.params = params
