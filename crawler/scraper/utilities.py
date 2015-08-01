@@ -1,6 +1,10 @@
 """ A bunch of utilitiy classes and functions. """
 
-def counted(function):
+
+from collections import OrderedDict
+
+
+def count_me(function):
     def wrapper(*args, **kwargs):
         wrapper.called += 1
         return function(*args, **kwargs)
@@ -9,10 +13,10 @@ def counted(function):
     return wrapper
 
 
-class UrlBuilder:
+class UrlObject:
     # Inspired by http://stackoverflow.com/questions/1590219/url-builder-for-python
 
-    def __init__(self, domain, path='', params={}):
+    def __init__(self, domain, path='', params=OrderedDict()):
         self.domain = domain
         self.path = path
         self.params = params
@@ -26,25 +30,24 @@ class UrlBuilder:
         return self
 
     @property
-    def slash(self):
+    def _slash(self):
         return '/' if self.path else ''
 
     @property
-    def question_mark(self):
+    def _question_mark(self):
         return '?' if self.params else ''
 
     @property
-    def query(self):
+    def _query(self):
         if not self.params:
             return ''
-
-        q = []
-        for k, v in self.params.items():
-            q.append(str(k) + '=' + str(v))
-        return '&'.join(q)
+        query = []
+        for key, value in self.params.items():
+            query.append(str(key) + '=' + str(value))
+        return '&'.join(query)
 
     def __str__(self):
-        return 'http://' + self.domain + self.slash + self.path + self.question_mark + self.query
+        return 'http://' + self.domain + self._slash + self.path + self._question_mark + self._query
 
     def build(self):
         return self.__str__()
@@ -56,7 +59,7 @@ class UrlBuilder:
 
 
 if __name__ == '__main__':
-    u = UrlBuilder('www.example.com')
+    u = UrlObject('www.example.com')
     print u.with_path('blablabla')
     print u.with_params({'a': 1})
     print u.with_path('elvis').with_params({'bar': 'foo'})
