@@ -19,68 +19,96 @@ from lxml.html import fromstring
 from ..items import Price
 from ..utilities import UrlObject, count_me
 
-MANUFACTURER = 'mavic'
-
-_product_urls_xpath = '//a[contains(@class, "productLink")]/@href'
-_manufacturer_id_xpath = '//*[@id="productListGallery"]/@data-manufacturerid'
-_total_pages_xpath = '//*[@id="totalPages"]/@data-totalpages'
-
 
 class Bruegelmann(Spider):
     name = 'www.bruegelmann.de'
     allowed_domains = [name]
-    start_urls = ['http://' + name + '/' + MANUFACTURER + '.html']
 
-    def __init__(self, *args, **kwargs):
+    _product_urls_xpath = '//a[contains(@class, "productLink")]/@href'
+    _manufacturer_id_xpath = '//*[@id="productListGallery"]/@data-manufacturerid'
+    _total_pages_xpath = '//*[@id="totalPages"]/@data-totalpages'
+    _total_products_xpath = '//*[@id="totalListProducts"]/span/text()'
+
+    def __init__(self, manufacturer=None, *args, **kwargs):
         super(Bruegelmann, self).__init__(*args, **kwargs)
-        self._requests = []
+
+        if not manufacturer:
+            raise ValueError('Please specify a manufacturer parameter.')
+
+        self.manufacturer = manufacturer
+        self.logger.debug('Preparing the spider for %s products', manufacturer.upper())
+        self.start_urls = ['http://' + self.name + '/' + manufacturer + '.html']
+
+        self.max_page_scroll = None
+        self.total_products = None
+        self.manufacturer_id = None
+
+        self._ajax_basket = set()
 
     def parse(self, response):
         select = Selector(response=response)
 
-        product_urls = select.xpath(_product_urls_xpath).extract()
-        max_page_scroll = int(select.xpath(_total_pages_xpath).extract()[0])
-        manufacturer_id = select.xpath(_manufacturer_id_xpath).extract()[0]
+        self.manufacturer_id = select.xpath(self._manufacturer_id_xpath).extract()[0]
+        self.max_page_scroll = int(select.xpath(self._total_pages_xpath).extract()[0])
+        self.total_products = int(select.xpath(self._total_products_xpath).extract()[0])
 
-        self._collect_requests(product_urls, self.parse_product)
+        self.logger.debug('Found %s products paginated across 1 landing page + %s paginated pages',
+                          self.total_products,
+                          self.max_page_scroll)
 
-        if max_page_scroll > 1:
-            ajax_urls = list(self._build_ajax_urls(manufacturer_id, max_page_scroll))
-            self._collect_requests(ajax_urls, self.parse_json)
+        initial_products = select.xpath(self._product_urls_xpath).extract()
+        paginated_products = list(self._build_pagination())
 
-        self.logger.debug('Total number of requests: %s', len(self._requests))
-        return self._requests
+        for product_url in initial_products:
+            yield Request(callback=self.parse_product, url=product_url)
 
+        if self.max_page_scroll > 1:
+            for page_nb, ajax_url in paginated_products:
+                yield Request(callback=self.parse_json,
+                              url=ajax_url,
+                              meta={'page_nb': page_nb})
+
+    @count_me
     def parse_json(self, response):
         json = loads(response.body)
-
-        # The json dict fails when keys are native strings: why?
         html_text = json[u'content']
         html_tree = fromstring(html_text)
+        product_urls = html_tree.xpath(self._product_urls_xpath)
 
-        product_urls = html_tree.xpath(_product_urls_xpath)
-        self.logger.debug('%s: %s products in the JSON object', response.url, len(product_urls))
-        self._collect_requests(product_urls, self.parse_product)
+        for product_url in product_urls:
+            yield Request(callback=self.parse_product, url=product_url)
 
-    def _build_ajax_urls(self, manufacturer_id, max_page_scroll):
-        query = {'intManufacturerId': manufacturer_id, 'totalPages': max_page_scroll}
+        self.logger.debug('Found %s products on page %s of %s',
+                          len(product_urls),
+                          response.meta['page_nb'],
+                          self.max_page_scroll)
+
+        if product_urls:
+            self._ajax_basket.add(response.meta['page_nb'])
+
+    def _build_pagination(self):
+        # The order of the query parameters seems to matter!
+        query = {'intManufacturerId': self.manufacturer_id,
+                 'intPage': None,
+                 'totalPages': self.max_page_scroll}
+
         ajax_url = UrlObject(self.name).with_path('ajax/filter').with_params(query)
 
-        for page_nb in range(1, max_page_scroll):
+        for page_nb in range(1, self.max_page_scroll):
             page = {'intPage': page_nb}
-            yield str(ajax_url.with_params(page))
-
-    def _collect_requests(self, urls, callback):
-        requests = [Request(callback=callback, url=url) for url in urls]
-        self._requests.extend(requests)
-        self.logger.debug('Built %s requests for %s', len(requests), callback.__name__)
+            yield page_nb, str(ajax_url.with_params(page))
 
     @count_me
     def parse_product(self, response):
         pass
 
+    def close(self, reason):
+        self.logger.debug('Successful ajax calls to pages %s. Spider closed (%s)',
+                          sorted(self._ajax_basket),
+                          reason)
+
 
 class BruegelmannPrice(Bruegelmann):
-    item = Price()
+    pass
 
 
