@@ -3,8 +3,8 @@
 
 
 from scrapy import Request
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
 from scrapy.selector import Selector
 from datetime import datetime
 from ..items import Review, Price, ChainReactionPriceLoader, ChainReactionReviewLoader

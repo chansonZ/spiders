@@ -1,103 +1,114 @@
 # -*- coding: utf-8 -*-
-""" The spider for Bruegelmann (bruegelmann.de). """
-
-
-from scrapy import Request
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.lxmlhtml import LxmlLinkExtractor as Extractor
-from scrapy.selector import Selector
-from datetime import datetime
-from ..items import Review, Price, BruegelmannPriceLoader, ChainReactionReviewLoader, BruegelmannReviewLoader
-
-
-RETAILER = 'Bruegelmann'
-MANUFACTURER = 'Fulcrum'
-
+""" The spiders for Bruegelmann (www.bruegelmann.de). """
 
 # SCRAPING NOTES:
+# ===============
 #
-# The retailer Bruegelmann only has 15 Fulcrum products, all on the Fulcrum brand page.
-# On individual product pages, there's no options or models to choose from and all the
-# comments are there. In short, it's a straightforward scraping exercise.
+# The retailer Bruegelmann lists products on a single page with infinite scrolling.
+# Once the first batch of product urls is collected, we send additional json requests
+# to collect the rest of them. The actual scraping happens once we land on individual
+# product pages.
 
 
-class Bruegelmann(CrawlSpider):
-    name = 'bruegelmann'
-    allowed_domains = ['bruegelmann.de']
-    start_urls = ['http://www.bruegelmann.de/fulcrum.html']
-    rules = [Rule(Extractor(allow='bruegelmann.de/fulcrum-\w+'), callback='parse_product')]
+from json import loads
+from scrapy import Request
+from scrapy.spiders import Spider
+from scrapy.selector import Selector
+from lxml.html import fromstring
 
-    response = None
-    selector = None
-    item = None
-    loader = None
-
-    def _register(self, response):
-        self.response = response
-        self.selector = Selector(response=response)
-        self.item = response.meta['item'] if 'item' in response.meta.keys() else Review()
-        self.loader = BruegelmannReviewLoader(self.item, response=self.response)
+from ..items import Price
+from ..utilities import UrlObject, count_me
 
 
-class BruegelmannPrices(Bruegelmann):
-    name = 'bruegelmann-prices'
+class Bruegelmann(Spider):
+    name = 'www.bruegelmann.de'
+    allowed_domains = [name]
 
+    _product_urls_xpath = '//a[contains(@class, "productLink")]/@href'
+    _manufacturer_id_xpath = '//*[@id="productListGallery"]/@data-manufacturerid'
+    _total_pages_xpath = '//*[@id="totalPages"]/@data-totalpages'
+    _total_products_xpath = '//*[@id="totalListProducts"]/span/text()'
+
+    def __init__(self, manufacturer=None, *args, **kwargs):
+        super(Bruegelmann, self).__init__(*args, **kwargs)
+
+        if not manufacturer:
+            raise ValueError('Please specify a manufacturer parameter.')
+
+        self.manufacturer = manufacturer
+        self.logger.debug('Preparing the spider for %s products', manufacturer.upper())
+        self.start_urls = ['http://' + self.name + '/' + manufacturer + '.html']
+
+        self.max_page_scroll = None
+        self.total_products = None
+        self.manufacturer_id = None
+
+        self._ajax_basket = set()
+
+    def parse(self, response):
+        select = Selector(response=response)
+
+        self.manufacturer_id = select.xpath(self._manufacturer_id_xpath).extract()[0]
+        self.max_page_scroll = int(select.xpath(self._total_pages_xpath).extract()[0])
+        self.total_products = int(select.xpath(self._total_products_xpath).extract()[0])
+
+        self.logger.debug('Found %s products paginated across 1 landing page + %s paginated pages',
+                          self.total_products,
+                          self.max_page_scroll)
+
+        initial_products = select.xpath(self._product_urls_xpath).extract()
+        paginated_products = list(self._build_pagination())
+
+        for product_url in initial_products:
+            yield Request(callback=self.parse_product, url=product_url)
+
+        if self.max_page_scroll > 1:
+            for page_nb, ajax_url in paginated_products:
+                yield Request(callback=self.parse_json,
+                              url=ajax_url,
+                              meta={'page_nb': page_nb})
+
+    @count_me
+    def parse_json(self, response):
+        json = loads(response.body)
+        html_text = json[u'content']
+        html_tree = fromstring(html_text)
+        product_urls = html_tree.xpath(self._product_urls_xpath)
+
+        for product_url in product_urls:
+            yield Request(callback=self.parse_product, url=product_url)
+
+        self.logger.debug('Found %s products on page %s of %s',
+                          len(product_urls),
+                          response.meta['page_nb'],
+                          self.max_page_scroll)
+
+        if product_urls:
+            self._ajax_basket.add(response.meta['page_nb'])
+
+    def _build_pagination(self):
+        # The order of the query parameters seems to matter!
+        query = {'intManufacturerId': self.manufacturer_id,
+                 'intPage': None,
+                 'totalPages': self.max_page_scroll}
+
+        ajax_url = UrlObject(self.name).with_path('ajax/filter').with_params(query)
+
+        for page_nb in range(1, self.max_page_scroll):
+            page = {'intPage': page_nb}
+            yield page_nb, str(ajax_url.with_params(page))
+
+    @count_me
     def parse_product(self, response):
-        self.response = response
+        pass
 
-        selector = Selector(response=response)
-
-        id_ = selector.xpath('//*[@id="ProductsInfo"]/span[2]/text()').extract()
-        saving = selector.xpath('//*[@id="productPriceContainer"]/div[2]/div/span/text()').extract()
-        price = selector.xpath('//*[@id="productPriceContainer"]/div[2]/span/text()').extract()
-        name = selector.xpath('//*[@id="ProductsInfo"]/h1/text()').extract()
-
-        return self.load(price, saving, id_, name)
-
-    def load(self, price, saving, id_, name):
-        loader = BruegelmannPriceLoader(item=Price(), response=self.response)
-
-        loader.add_value('id', id_)
-        loader.add_value('timestamp', datetime.now())
-        loader.add_value('price', price)
-        loader.add_value('saving', saving)
-        loader.add_value('hash', RETAILER)
-        loader.add_value('hash', name)
-        loader.add_value('slug', name)
-        loader.add_value('name', name)
-        loader.add_value('retailer', RETAILER)
-        loader.add_value('manufacturer', MANUFACTURER)
-
-        return loader.load_item()
+    def close(self, reason):
+        self.logger.debug('Successful ajax calls to pages %s. Spider closed (%s)',
+                          sorted(self._ajax_basket),
+                          reason)
 
 
-class BruegelmannReviews(Bruegelmann):
-    name = 'bruegelmann-reviews'
+class BruegelmannPrice(Bruegelmann):
+    pass
 
-    def _register(self, response):
-        self.response = response
-        self.selector = Selector(response=response)
-        self.item = response.meta['item'] if 'item' in response.meta.keys() else Review()
-        self.loader = ChainReactionReviewLoader(self.item, response=self.response)
 
-    def parse_product(self, response):
-        self._register(response)
-
-        self.loader.add_value('slug', self.selector.re('productDisplayName="(.+?)"'))
-        self.loader.add_value('name', self.selector.re('productDisplayName="(.+?)"'))
-        self.loader.add_value('retailer', RETAILER)
-        self.loader.add_value('manufacturer', MANUFACTURER)
-
-        request = Request(response.url + '/reviews.djs?format=embeddedhtml', callback=self.parse_reviews)
-        request.meta['item'] = self.loader.load_item()
-
-        return request
-
-    def parse_reviews(self, response):
-        self._register(response)
-
-        self.loader.add_value('review', 'review')
-        self.loader.add_value('author', 'author')
-        self.loader.add_value('date', 'date')
-
-        return self.loader.load_item()
