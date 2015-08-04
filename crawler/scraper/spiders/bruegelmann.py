@@ -9,7 +9,7 @@
 # to collect the rest of them. The actual scraping happens once we land on individual
 # product pages.
 
-
+from collections import OrderedDict
 from json import loads
 from scrapy import Request
 from scrapy.spiders import Spider
@@ -17,7 +17,7 @@ from scrapy.selector import Selector
 from lxml.html import fromstring
 
 from ..items import Price
-from ..utilities import UrlObject, count_me
+from ..utilities import Url, count_me
 
 
 class Bruegelmann(Spider):
@@ -36,7 +36,6 @@ class Bruegelmann(Spider):
             raise ValueError('Please specify a manufacturer parameter.')
 
         self.manufacturer = manufacturer
-        self.logger.debug('Preparing the spider for %s products', manufacturer.upper())
         self.start_urls = ['http://' + self.name + '/' + manufacturer + '.html']
 
         self.max_page_scroll = None
@@ -45,6 +44,8 @@ class Bruegelmann(Spider):
 
         self._ajax_basket = set()
 
+        self.logger.debug('Preparing the spider for %s products', manufacturer.upper())
+
     def parse(self, response):
         select = Selector(response=response)
 
@@ -52,21 +53,19 @@ class Bruegelmann(Spider):
         self.max_page_scroll = int(select.xpath(self._total_pages_xpath).extract()[0])
         self.total_products = int(select.xpath(self._total_products_xpath).extract()[0])
 
-        self.logger.debug('Found %s products paginated across 1 landing page + %s paginated pages',
+        self.logger.debug('Scraping %s products across 1 initial page + %s paginated pages',
                           self.total_products,
                           self.max_page_scroll)
 
-        initial_products = select.xpath(self._product_urls_xpath).extract()
-        paginated_products = list(self._build_pagination())
+        initial_products_urls = select.xpath(self._product_urls_xpath).extract()
+        pagination_urls = list(self._build_ajax_urls())
 
-        for product_url in initial_products:
+        for product_url in initial_products_urls:
             yield Request(callback=self.parse_product, url=product_url)
 
         if self.max_page_scroll > 1:
-            for page_nb, ajax_url in paginated_products:
-                yield Request(callback=self.parse_json,
-                              url=ajax_url,
-                              meta={'page_nb': page_nb})
+            for page_nb, page_url in pagination_urls:
+                yield Request(callback=self.parse_json, url=page_url, meta={'page_nb': page_nb})
 
     @count_me
     def parse_json(self, response):
@@ -86,15 +85,11 @@ class Bruegelmann(Spider):
         if product_urls:
             self._ajax_basket.add(response.meta['page_nb'])
 
-    def _build_pagination(self):
-        # The order of the query parameters seems to matter!
-        query = {'intManufacturerId': self.manufacturer_id,
-                 'intPage': None,
-                 'totalPages': self.max_page_scroll}
+    def _build_ajax_urls(self):
+        query = OrderedDict(intManufacturerId=self.manufacturer_id, intPage=None, totalPages=self.max_page_scroll)
+        ajax_url = Url(self.name).with_path('ajax/filter').with_params(query)
 
-        ajax_url = UrlObject(self.name).with_path('ajax/filter').with_params(query)
-
-        for page_nb in range(1, self.max_page_scroll):
+        for page_nb in range(1, self.max_page_scroll + 1):
             page = {'intPage': page_nb}
             yield page_nb, str(ajax_url.with_params(page))
 

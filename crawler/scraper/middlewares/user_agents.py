@@ -32,5 +32,6 @@ USER_AGENTS =  \
 class RotateUserAgentMiddleware(UserAgentMiddleware):
 
     def process_request(self, request, spider):
-        request.headers.setdefault('User-Agent', choice(USER_AGENTS))
+        pass
+        # request.headers.setdefault('User-Agent', choice(USER_AGENTS))
 

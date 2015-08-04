@@ -1,9 +1,6 @@
 """ A bunch of utilitiy classes and functions. """
 
 
-from collections import OrderedDict
-
-
 def count_me(function):
     def wrapper(*args, **kwargs):
         wrapper.called += 1
@@ -13,10 +10,10 @@ def count_me(function):
     return wrapper
 
 
-class UrlObject:
-    # Inspired by http://stackoverflow.com/questions/1590219/url-builder-for-python
+# UrlObject is inspired by http://stackoverflow.com/questions/1590219/url-builder-for-python
 
-    def __init__(self, domain, path='', params=OrderedDict()):
+class Url:
+    def __init__(self, domain, path=None, params=None):
         self.domain = domain
         self.path = path
         self.params = params
@@ -26,7 +23,10 @@ class UrlObject:
         return self
 
     def with_params(self, params):
-        self.params.update(params)
+        if not self.params:
+            self.params = params
+        else:
+            self.params.update(params)
         return self
 
     @property
@@ -41,9 +41,10 @@ class UrlObject:
     def _query(self):
         if not self.params:
             return ''
-        query = []
-        for key, value in self.params.items():
-            query.append(str(key) + '=' + str(value))
+        else:
+            query = []
+            for key, value in self.params.items():
+                query.append(str(key) + '=' + str(value))
         return '&'.join(query)
 
     def __str__(self):
@@ -59,7 +60,7 @@ class UrlObject:
 
 
 if __name__ == '__main__':
-    u = UrlObject('www.example.com')
+    u = Url('www.example.com')
     print u.with_path('blablabla')
     print u.with_params({'a': 1})
     print u.with_path('elvis').with_params({'bar': 'foo'})
